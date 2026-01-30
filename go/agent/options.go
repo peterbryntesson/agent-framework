@@ -1,0 +1,72 @@
+// Copyright (c) Microsoft. All rights reserved.
+
+package agent
+
+// RunOption is a functional option for configuring an agent run.
+// Use the With* functions to create options.
+// This will be fully implemented in User Story 1.2.4.
+type RunOption func(*RunConfig)
+
+// RunConfig holds the configuration for an agent run.
+// This type is exported for use by agent implementations.
+type RunConfig struct {
+	Session     Session
+	Metadata    map[string]interface{}
+	Tools       []interface{}
+	MaxTokens   int
+	Temperature float32
+}
+
+// ApplyRunOptions applies all options to a default configuration and returns the result.
+// This is useful for agent implementations that need to process RunOption values.
+func ApplyRunOptions(opts ...RunOption) *RunConfig {
+	cfg := &RunConfig{
+		MaxTokens:   0, // 0 means use model default
+		Temperature: 0, // 0 means use model default
+		Metadata:    make(map[string]interface{}),
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(cfg)
+		}
+	}
+	return cfg
+}
+
+// WithSession sets the session for the agent run.
+func WithSession(session Session) RunOption {
+	return func(cfg *RunConfig) {
+		cfg.Session = session
+	}
+}
+
+// WithTools adds tools available for this run.
+func WithTools(tools ...interface{}) RunOption {
+	return func(cfg *RunConfig) {
+		cfg.Tools = append(cfg.Tools, tools...)
+	}
+}
+
+// WithMaxTokens sets the maximum tokens for the response.
+func WithMaxTokens(maxTokens int) RunOption {
+	return func(cfg *RunConfig) {
+		cfg.MaxTokens = maxTokens
+	}
+}
+
+// WithTemperature sets the temperature for response generation.
+// Values typically range from 0.0 (deterministic) to 1.0 (creative).
+func WithTemperature(temperature float32) RunOption {
+	return func(cfg *RunConfig) {
+		cfg.Temperature = temperature
+	}
+}
+
+// WithMetadata adds metadata to the run configuration.
+func WithMetadata(metadata map[string]interface{}) RunOption {
+	return func(cfg *RunConfig) {
+		for k, v := range metadata {
+			cfg.Metadata[k] = v
+		}
+	}
+}

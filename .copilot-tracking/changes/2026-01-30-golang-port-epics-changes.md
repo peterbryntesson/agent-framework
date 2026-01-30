@@ -60,9 +60,81 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * Created observability package with minimal implementation
   * Reason: Needed to ensure OpenTelemetry dependencies are actually required by the module (go mod tidy removes unused dependencies)
 
-## Validation Results
+---
+
+## User Story 1.2.1: Define Agent Interface
+
+**Date**: 2026-01-30
+
+### Added
+
+* go/agent/agent.go - Core Agent interface definition with:
+  * `Agent` interface with ID(), Name(), Description(), Metadata() identity methods
+  * Run(ctx, messages, opts...) (*Response, error) for synchronous execution
+  * RunStream(ctx, messages, opts...) (<-chan ResponseUpdate, error) for streaming
+  * NewSession(ctx) (Session, error) for creating new conversation sessions
+  * RestoreSession(ctx, data) (Session, error) for deserializing persisted sessions
+  * GetService(serviceType) interface{} for service locator pattern extensibility
+  * Generic GetService[T](agent) helper function for type-safe service retrieval
+* go/agent/metadata.go - AIAgentMetadata struct with:
+  * ProviderName field for OpenTelemetry semantic conventions
+  * NewAIAgentMetadata(providerName) constructor
+* go/agent/message.go - Message type stub with Role and Content fields
+* go/agent/response.go - Response types with:
+  * Response struct with Messages, Usage, FinishReason, SessionState, Metadata
+  * Text() method for concatenating message content
+  * ResponseUpdate struct for streaming with Kind, Delta, Message, Metadata
+  * UpdateKind constants: ContentDelta, ToolCall, ToolResult, MessageComplete, Error, Done
+  * ContentDelta struct with Role, TextDelta, ToolCallID, Name, ArgsDelta
+  * FinishReason constants: Stop, Length, ToolCalls, ContentFilter
+  * UsageDetails struct for token tracking
+* go/agent/session.go - Session interface with:
+  * ID(), Messages(), AddMessage(), Serialize(), GetService() methods
+* go/agent/options.go - Functional options pattern with:
+  * RunOption function type
+  * runConfig internal configuration struct
+  * WithSession, WithTools, WithMaxTokens, WithTemperature, WithMetadata options
+  * applyOptions and defaultRunConfig helpers
+* go/agent/doc.go - Package documentation with:
+  * Overview of Agent interface
+  * Usage examples for Run, RunStream, session management
+  * Service resolution patterns
+  * Option configuration examples
+
+### Validation Results
 
 * `go build ./...` - Passed
-* `go test ./...` - Passed (observability tests: 6.130s)
-* Module path verified: `github.com/microsoft/agent-framework-go`
-* Go version constraint: 1.22.0 ✓
+* `go vet ./...` - Passed
+* golangci-lint - Not installed locally (CI will validate)
+
+---
+
+## Review Fix: User Story 1.2.1 Lint Issues
+
+**Date**: 2026-01-30
+
+### Modified
+
+* go/.golangci.yml - Replaced deprecated `exportloopref` linter with `copyloopvar`
+* go/agent/agent.go - Applied `go fmt` formatting fixes
+* go/agent/doc.go - Applied `go fmt` formatting fixes
+* go/agent/message.go - Applied `go fmt` formatting fixes
+* go/agent/metadata.go - Applied `go fmt` formatting fixes
+* go/agent/options.go - Applied multiple fixes:
+  * Applied `go fmt` formatting
+  * Exported `runConfig` as `RunConfig` for use by agent implementations
+  * Renamed `applyOptions` to `ApplyRunOptions` and exported it
+  * Removed unused `defaultRunConfig` function (merged into `ApplyRunOptions`)
+  * Updated all `With*` option functions to use exported `RunConfig` type
+  * Optimized struct field alignment via `fieldalignment -fix`
+* go/agent/response.go - Applied multiple fixes:
+  * Applied `go fmt` formatting
+  * Optimized `Response` struct field alignment via `fieldalignment -fix`
+  * Optimized `ResponseUpdate` struct field alignment via `fieldalignment -fix`
+* go/agent/session.go - Applied `go fmt` formatting fixes
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `golangci-lint run ./agent/...` - Passed (0 issues)
