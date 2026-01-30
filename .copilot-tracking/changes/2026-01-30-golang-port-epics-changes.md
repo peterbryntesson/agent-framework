@@ -330,3 +330,52 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * `go vet ./...` - Passed
 * `go test -v ./agent/... -run "With|RunOption|RunConfig|ApplyRunOptions"` - All 23 tests passed
 * `go test -cover ./...` - 86.7% statement coverage (agent package, up from 60.0%)
+
+---
+
+## User Story 1.2.5: Implement Error Types
+
+**Date**: 2026-01-30
+
+### Added
+
+* go/agent/errors.go - Agent-specific error types with:
+  * Sentinel errors: `ErrSessionNotFound`, `ErrInvalidInput`, `ErrRateLimited`, `ErrProviderError`, `ErrToolInvocationFailed`
+  * `AgentError` struct with Op, AgentID, Err fields for structured error context
+  * `Error()` method returning formatted message with agent and operation context
+  * `Unwrap()` method for compatibility with `errors.Is` and `errors.As`
+  * `NewAgentError(op, agentID, err)` constructor function
+  * `IsRetryable(error) bool` helper function identifying transient errors (rate limiting, provider errors)
+* go/agent/errors_test.go - Comprehensive unit tests with:
+  * `TestSentinelErrors_AreDistinct` - verifies all sentinel errors are unique
+  * `TestSentinelErrors_HaveDescriptiveMessages` - verifies error message content
+  * `TestAgentError_ErrorWithAgentID` - verifies formatted message with agent ID
+  * `TestAgentError_ErrorWithoutAgentID` - verifies fallback format without agent ID
+  * `TestAgentError_Unwrap` - verifies underlying error extraction
+  * `TestAgentError_WorksWithErrorsIs` - verifies `errors.Is` compatibility
+  * `TestAgentError_WorksWithErrorsAs` - verifies `errors.As` compatibility
+  * `TestAgentError_NestedWrapping` - verifies deeply nested error chains
+  * `TestNewAgentError_CreatesCorrectError` - verifies constructor
+  * `TestIsRetryable_NilError` - verifies nil safety
+  * `TestIsRetryable_RateLimited` - verifies rate limit is retryable
+  * `TestIsRetryable_WrappedRateLimited` - verifies wrapped rate limit detection
+  * `TestIsRetryable_ProviderError` - verifies provider error is retryable
+  * `TestIsRetryable_WrappedProviderError` - verifies wrapped provider error detection
+  * `TestIsRetryable_SessionNotFound` - verifies session not found is not retryable
+  * `TestIsRetryable_InvalidInput` - verifies invalid input is not retryable
+  * `TestIsRetryable_ToolInvocationFailed` - verifies tool failure is not retryable
+  * `TestIsRetryable_UnknownError` - verifies unknown errors are not retryable
+  * `TestIsRetryable_DeeplyNestedRetryable` - verifies nested retryable detection
+  * `TestAgentError_AllFieldsSet` - verifies struct field access
+  * `TestAgentError_ImplementsErrorInterface` - verifies interface compliance
+
+### Modified
+
+(none)
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test -v ./agent/... -run "Error|Sentinel|Retryable"` - All 21 tests passed
+* `go test -cover ./...` - 89.7% statement coverage (agent package, up from 86.7%)
