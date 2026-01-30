@@ -109,6 +109,47 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 
 ---
 
+## User Story 1.2.2: Implement Response Types
+
+**Date**: 2026-01-30
+
+### Added
+
+(none - types already existed as stubs)
+
+### Modified
+
+* go/agent/response.go - Completed response types implementation with:
+  * Added `time` package import for timestamp fields
+  * Added `AsyncRunStatus` type (string-based enum) with status constants:
+    * `StatusQueued` - run is waiting to be processed
+    * `StatusInProgress` - run is currently executing
+    * `StatusRequiresAction` - run needs user input (e.g., tool approval)
+    * `StatusCompleted` - run finished successfully
+    * `StatusCancelled` - run was cancelled by the user
+    * `StatusFailed` - run encountered an unrecoverable error
+    * `StatusExpired` - run exceeded its time limit
+  * Added `IsTerminal()` method on `AsyncRunStatus` returning true for terminal states
+  * Added `AsyncRunError` struct with Code and Message fields (JSON-tagged)
+  * Added `AsyncRunContent` struct for long-running operations with:
+    * `RunID` - unique identifier for the async run
+    * `Status` - current state of the async run
+    * `ThreadID` - conversation thread associated with this run
+    * `ExpiresAt` - when the run will expire if not completed
+    * `StartedAt` - when the run started processing
+    * `CompletedAt` - when the run finished
+    * `Error` - error details if the run failed
+    * All fields with proper JSON tags for serialization
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go fmt ./agent/...` - Passed (no changes needed)
+* golangci-lint - Not installed locally (CI will validate)
+
+---
+
 ## Review Fix: User Story 1.2.1 Lint Issues
 
 **Date**: 2026-01-30
@@ -138,3 +179,53 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * `go build ./...` - Passed
 * `go vet ./...` - Passed
 * `golangci-lint run ./agent/...` - Passed (0 issues)
+---
+
+## Review Fix: User Story 1.2.2 Design Alignment
+
+**Date**: 2026-01-30
+
+### Added
+
+* go/agent/response_test.go - Comprehensive unit tests for response types with:
+  * `TestResponseText_EmptyMessages` - verifies empty string for empty messages
+  * `TestResponseText_NilResponse` - verifies nil safety
+  * `TestResponseText_SingleMessage` - verifies single message concatenation
+  * `TestResponseText_MultipleMessages` - verifies multiple message concatenation
+  * `TestResponseFields` - verifies all Response struct fields including new extension fields
+  * `TestAsyncRunStatusIsTerminal_TerminalStatuses` - verifies terminal status detection
+  * `TestAsyncRunStatusIsTerminal_NonTerminalStatuses` - verifies non-terminal status detection
+  * `TestAsyncRunStatusIsTerminal_UnknownStatus` - verifies unknown status handling
+  * `TestAsyncRunContent_AllFields` - verifies AsyncRunContent struct fields
+  * `TestAsyncRunContent_WithError` - verifies error handling in async run content
+  * `TestUpdateKindConstants` - verifies all UpdateKind constants are distinct and ordered
+  * `TestFinishReasonConstants` - verifies all FinishReason constants are distinct
+  * `TestResponseUpdate_AllFields` - verifies all ResponseUpdate fields including new ones
+  * `TestContentDelta_AllFields` - verifies ContentDelta struct fields
+  * `TestUsageDetails_AllFields` - verifies UsageDetails struct fields
+  * `TestAsyncRunStatusValues` - verifies string values match expected API format
+
+### Modified
+
+* go/agent/response.go - Added missing fields per design specification:
+  * Added `UpdateKindUsage` constant to UpdateKind for usage-only streaming updates
+  * Added `Usage *UsageDetails` field to ResponseUpdate for streaming token usage
+  * Added `FinishReason FinishReason` field to ResponseUpdate for completion reason
+  * Added `Error error` field to ResponseUpdate for detailed error information
+  * Added `ContinuationToken string` field to Response for resuming long-running operations
+  * Added `AdditionalProperties map[string]interface{}` field to Response for extensibility
+  * Added `RawRepresentation interface{}` field to Response for provider-specific data access
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test ./agent/... -v` - All 16 tests passed
+* `go test ./agent/... -cover` - 27.3% statement coverage (covers response types)
+
+### Design Deviations (Intentional)
+
+* `UpdateKind` uses `int` enum (iota) instead of `string`
+  * Reason: Idiomatic Go prefers iota-based int enums for compile-time type safety and switch exhaustiveness checking
+* `ContentDelta.Role` uses `string` instead of `chat.Role`
+  * Reason: `chat.Role` type deferred to Feature 1.3 (Chat Client Abstractions); current implementation uses string for flexibility
