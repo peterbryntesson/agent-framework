@@ -27,7 +27,7 @@ func TestApplyRunOptions_DefaultConfig(t *testing.T) {
 
 func TestApplyRunOptions_NilOption(t *testing.T) {
 	// Arrange
-	var nilOption RunOption = nil
+	var nilOption RunOption
 
 	// Act - should not panic
 	cfg := ApplyRunOptions(nilOption)
@@ -50,7 +50,7 @@ func TestWithSession_SetsSession(t *testing.T) {
 
 func TestWithSession_NilSession(t *testing.T) {
 	// Arrange
-	var session Session = nil
+	var session Session
 
 	// Act
 	cfg := ApplyRunOptions(WithSession(session))
@@ -243,7 +243,7 @@ func TestWithMetadata_EmptyMap(t *testing.T) {
 
 func TestWithMetadata_NilMap(t *testing.T) {
 	// Arrange
-	var metadata map[string]interface{} = nil
+	var metadata map[string]interface{}
 
 	// Act
 	cfg := ApplyRunOptions(WithMetadata(metadata))

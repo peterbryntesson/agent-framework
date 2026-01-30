@@ -40,10 +40,10 @@ type inMemorySessionState struct {
 // It is thread-safe and suitable for testing and simple use cases where
 // persistence across process restarts is not required.
 type InMemorySession struct {
-	mu       sync.RWMutex
-	id       string
-	messages []Message
 	services map[reflect.Type]interface{}
+	messages []Message
+	id       string
+	mu       sync.RWMutex
 }
 
 // NewInMemorySession creates a new InMemorySession with a generated UUID.

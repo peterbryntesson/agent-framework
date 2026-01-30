@@ -9,20 +9,29 @@ import (
 
 // Response represents the complete result of an agent run.
 type Response struct {
-	Metadata     map[string]interface{}
-	Usage        *UsageDetails
-	SessionState json.RawMessage
-	Messages     []Message
-	FinishReason FinishReason
-
-	// ContinuationToken for resuming long-running operations.
-	ContinuationToken string
+	// Metadata contains response metadata.
+	Metadata map[string]interface{}
 
 	// AdditionalProperties for extensibility.
 	AdditionalProperties map[string]interface{}
 
 	// RawRepresentation holds provider-specific response data.
 	RawRepresentation interface{}
+
+	// Usage contains token usage information.
+	Usage *UsageDetails
+
+	// SessionState contains serialized session state.
+	SessionState json.RawMessage
+
+	// Messages contains the response messages.
+	Messages []Message
+
+	// ContinuationToken for resuming long-running operations.
+	ContinuationToken string
+
+	// FinishReason indicates why generation stopped.
+	FinishReason FinishReason
 }
 
 // Text returns the concatenated text content of all messages in the response.
@@ -43,23 +52,23 @@ type ResponseUpdate struct {
 	// Metadata contains additional update metadata.
 	Metadata map[string]interface{}
 
+	// Error for error updates.
+	Error error
+
 	// Delta contains the incremental content for ContentDelta updates.
 	Delta *ContentDelta
 
 	// Message contains the complete message for MessageComplete updates.
 	Message *Message
 
-	// Kind indicates the type of update.
-	Kind UpdateKind
-
 	// Usage contains token usage information for usage updates.
 	Usage *UsageDetails
 
+	// Kind indicates the type of update.
+	Kind UpdateKind
+
 	// FinishReason for completion updates.
 	FinishReason FinishReason
-
-	// Error for error updates.
-	Error error
 }
 
 // UpdateKind represents the type of streaming update.
@@ -158,8 +167,8 @@ const (
 	// StatusCompleted indicates the run finished successfully.
 	StatusCompleted AsyncRunStatus = "completed"
 
-	// StatusCancelled indicates the run was cancelled by the user.
-	StatusCancelled AsyncRunStatus = "cancelled"
+	// StatusCanceled indicates the run was canceled by the user.
+	StatusCanceled AsyncRunStatus = "canceled"
 
 	// StatusFailed indicates the run encountered an unrecoverable error.
 	StatusFailed AsyncRunStatus = "failed"
@@ -171,7 +180,7 @@ const (
 // IsTerminal returns true if the status represents a final state.
 func (s AsyncRunStatus) IsTerminal() bool {
 	switch s {
-	case StatusCompleted, StatusCancelled, StatusFailed, StatusExpired:
+	case StatusCompleted, StatusCanceled, StatusFailed, StatusExpired:
 		return true
 	default:
 		return false
@@ -194,11 +203,11 @@ type AsyncRunContent struct {
 	// RunID is the unique identifier for the async run.
 	RunID string `json:"run_id"`
 
-	// Status indicates the current state of the async run.
-	Status AsyncRunStatus `json:"status"`
-
 	// ThreadID is the conversation thread associated with this run.
 	ThreadID string `json:"thread_id,omitempty"`
+
+	// Status indicates the current state of the async run.
+	Status AsyncRunStatus `json:"status"`
 
 	// ExpiresAt indicates when the run will expire if not completed.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`

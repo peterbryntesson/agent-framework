@@ -26,10 +26,10 @@ var (
 	ErrToolInvocationFailed = errors.New("tool invocation failed")
 )
 
-// AgentError provides structured error information for agent operations.
+// Error provides structured error information for agent operations.
 // It wraps an underlying error with contextual information about the operation
 // and agent that encountered the error.
-type AgentError struct {
+type Error struct {
 	// Op is the operation that failed (e.g., "Run", "RunStream", "NewSession").
 	Op string
 
@@ -41,7 +41,7 @@ type AgentError struct {
 }
 
 // Error returns a formatted error message including operation and agent context.
-func (e *AgentError) Error() string {
+func (e *Error) Error() string {
 	if e.AgentID != "" {
 		return fmt.Sprintf("agent %s: %s: %v", e.AgentID, e.Op, e.Err)
 	}
@@ -49,13 +49,13 @@ func (e *AgentError) Error() string {
 }
 
 // Unwrap returns the underlying error for use with errors.Is and errors.As.
-func (e *AgentError) Unwrap() error {
+func (e *Error) Unwrap() error {
 	return e.Err
 }
 
-// NewAgentError creates a new AgentError with the specified operation, agent ID, and underlying error.
-func NewAgentError(op string, agentID string, err error) *AgentError {
-	return &AgentError{
+// NewError creates a new Error with the specified operation, agent ID, and underlying error.
+func NewError(op string, agentID string, err error) *Error {
+	return &Error{
 		Op:      op,
 		AgentID: agentID,
 		Err:     err,

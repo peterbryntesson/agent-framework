@@ -98,12 +98,21 @@ func TestResponseFields(t *testing.T) {
 	if response.RawRepresentation == nil {
 		t.Error("Expected RawRepresentation to be set")
 	}
+	if response.Metadata["meta"] != "data" {
+		t.Errorf("Expected Metadata['meta'] = 'data', got %v", response.Metadata["meta"])
+	}
+	if string(response.SessionState) != `{"key": "value"}` {
+		t.Errorf("Expected SessionState to match, got %s", string(response.SessionState))
+	}
+	if len(response.Messages) != 1 || response.Messages[0].Content != "test" {
+		t.Errorf("Expected one message with content 'test', got %v", response.Messages)
+	}
 }
 
 func TestAsyncRunStatusIsTerminal_TerminalStatuses(t *testing.T) {
 	terminalStatuses := []AsyncRunStatus{
 		StatusCompleted,
-		StatusCancelled,
+		StatusCanceled,
 		StatusFailed,
 		StatusExpired,
 	}
@@ -161,6 +170,18 @@ func TestAsyncRunContent_AllFields(t *testing.T) {
 	if runContent.ThreadID != "thread_456" {
 		t.Errorf("Expected ThreadID 'thread_456', got %q", runContent.ThreadID)
 	}
+	if runContent.ExpiresAt == nil || !runContent.ExpiresAt.Equal(expiresAt) {
+		t.Errorf("Expected ExpiresAt to match, got %v", runContent.ExpiresAt)
+	}
+	if runContent.StartedAt == nil || !runContent.StartedAt.Equal(now) {
+		t.Errorf("Expected StartedAt to match, got %v", runContent.StartedAt)
+	}
+	if runContent.CompletedAt == nil || !runContent.CompletedAt.Equal(completedAt) {
+		t.Errorf("Expected CompletedAt to match, got %v", runContent.CompletedAt)
+	}
+	if runContent.Error != nil {
+		t.Errorf("Expected Error to be nil, got %v", runContent.Error)
+	}
 }
 
 func TestAsyncRunContent_WithError(t *testing.T) {
@@ -183,6 +204,12 @@ func TestAsyncRunContent_WithError(t *testing.T) {
 	}
 	if runContent.Error.Message != "Too many requests" {
 		t.Errorf("Expected error message 'Too many requests', got %q", runContent.Error.Message)
+	}
+	if runContent.RunID != "run_789" {
+		t.Errorf("Expected RunID 'run_789', got %q", runContent.RunID)
+	}
+	if runContent.Status != StatusFailed {
+		t.Errorf("Expected StatusFailed, got %s", runContent.Status)
 	}
 }
 
@@ -267,6 +294,9 @@ func TestResponseUpdate_AllFields(t *testing.T) {
 	if update.Error == nil || update.Error.Error() != "test error" {
 		t.Errorf("Expected Error 'test error', got %v", update.Error)
 	}
+	if update.Metadata["key"] != "value" {
+		t.Errorf("Expected Metadata['key'] = 'value', got %v", update.Metadata["key"])
+	}
 }
 
 func TestContentDelta_AllFields(t *testing.T) {
@@ -328,7 +358,7 @@ func TestAsyncRunStatusValues(t *testing.T) {
 		StatusInProgress:     "in_progress",
 		StatusRequiresAction: "requires_action",
 		StatusCompleted:      "completed",
-		StatusCancelled:      "cancelled",
+		StatusCanceled:       "canceled",
 		StatusFailed:         "failed",
 		StatusExpired:        "expired",
 	}

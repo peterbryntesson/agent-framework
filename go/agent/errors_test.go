@@ -40,9 +40,9 @@ func TestSentinelErrors_HaveDescriptiveMessages(t *testing.T) {
 	assert.Equal(t, "tool invocation failed", ErrToolInvocationFailed.Error())
 }
 
-func TestAgentError_ErrorWithAgentID(t *testing.T) {
+func TestError_ErrorWithAgentID(t *testing.T) {
 	// Arrange
-	agentErr := &AgentError{
+	agentErr := &Error{
 		Op:      "Run",
 		AgentID: "agent-123",
 		Err:     ErrProviderError,
@@ -55,9 +55,9 @@ func TestAgentError_ErrorWithAgentID(t *testing.T) {
 	assert.Equal(t, "agent agent-123: Run: provider error", message)
 }
 
-func TestAgentError_ErrorWithoutAgentID(t *testing.T) {
+func TestError_ErrorWithoutAgentID(t *testing.T) {
 	// Arrange
-	agentErr := &AgentError{
+	agentErr := &Error{
 		Op:      "RunStream",
 		AgentID: "",
 		Err:     ErrRateLimited,
@@ -70,10 +70,10 @@ func TestAgentError_ErrorWithoutAgentID(t *testing.T) {
 	assert.Equal(t, "RunStream: rate limited", message)
 }
 
-func TestAgentError_Unwrap(t *testing.T) {
+func TestError_Unwrap(t *testing.T) {
 	// Arrange
 	underlying := ErrSessionNotFound
-	agentErr := &AgentError{
+	agentErr := &Error{
 		Op:      "RestoreSession",
 		AgentID: "agent-456",
 		Err:     underlying,
@@ -86,9 +86,9 @@ func TestAgentError_Unwrap(t *testing.T) {
 	assert.Equal(t, underlying, unwrapped)
 }
 
-func TestAgentError_WorksWithErrorsIs(t *testing.T) {
+func TestError_WorksWithErrorsIs(t *testing.T) {
 	// Arrange
-	agentErr := &AgentError{
+	agentErr := &Error{
 		Op:      "NewSession",
 		AgentID: "agent-789",
 		Err:     ErrInvalidInput,
@@ -99,9 +99,9 @@ func TestAgentError_WorksWithErrorsIs(t *testing.T) {
 	assert.False(t, errors.Is(agentErr, ErrProviderError))
 }
 
-func TestAgentError_WorksWithErrorsAs(t *testing.T) {
+func TestError_WorksWithErrorsAs(t *testing.T) {
 	// Arrange
-	agentErr := &AgentError{
+	agentErr := &Error{
 		Op:      "Run",
 		AgentID: "agent-abc",
 		Err:     ErrToolInvocationFailed,
@@ -109,7 +109,7 @@ func TestAgentError_WorksWithErrorsAs(t *testing.T) {
 	wrappedErr := fmt.Errorf("outer error: %w", agentErr)
 
 	// Act
-	var target *AgentError
+	var target *Error
 	found := errors.As(wrappedErr, &target)
 
 	// Assert
@@ -119,14 +119,14 @@ func TestAgentError_WorksWithErrorsAs(t *testing.T) {
 	assert.Equal(t, ErrToolInvocationFailed, target.Err)
 }
 
-func TestAgentError_NestedWrapping(t *testing.T) {
+func TestError_NestedWrapping(t *testing.T) {
 	// Arrange
-	innerErr := &AgentError{
+	innerErr := &Error{
 		Op:      "ToolInvoke",
 		AgentID: "inner-agent",
 		Err:     ErrToolInvocationFailed,
 	}
-	outerErr := &AgentError{
+	outerErr := &Error{
 		Op:      "Run",
 		AgentID: "outer-agent",
 		Err:     innerErr,
@@ -137,14 +137,14 @@ func TestAgentError_NestedWrapping(t *testing.T) {
 	assert.Contains(t, outerErr.Error(), "outer-agent")
 }
 
-func TestNewAgentError_CreatesCorrectError(t *testing.T) {
+func TestNewError_CreatesCorrectError(t *testing.T) {
 	// Arrange
 	op := "GetService"
 	agentID := "test-agent"
 	err := ErrSessionNotFound
 
 	// Act
-	agentErr := NewAgentError(op, agentID, err)
+	agentErr := NewError(op, agentID, err)
 
 	// Assert
 	require.NotNil(t, agentErr)
@@ -168,7 +168,7 @@ func TestIsRetryable_RateLimited(t *testing.T) {
 
 func TestIsRetryable_WrappedRateLimited(t *testing.T) {
 	// Arrange
-	err := &AgentError{
+	err := &Error{
 		Op:      "Run",
 		AgentID: "agent-123",
 		Err:     ErrRateLimited,
@@ -228,7 +228,7 @@ func TestIsRetryable_UnknownError(t *testing.T) {
 
 func TestIsRetryable_DeeplyNestedRetryable(t *testing.T) {
 	// Arrange
-	innerErr := &AgentError{
+	innerErr := &Error{
 		Op:      "InternalCall",
 		AgentID: "inner",
 		Err:     ErrRateLimited,
@@ -239,9 +239,9 @@ func TestIsRetryable_DeeplyNestedRetryable(t *testing.T) {
 	assert.True(t, IsRetryable(outerErr))
 }
 
-func TestAgentError_AllFieldsSet(t *testing.T) {
+func TestError_AllFieldsSet(t *testing.T) {
 	// Arrange
-	agentErr := &AgentError{
+	agentErr := &Error{
 		Op:      "RunStream",
 		AgentID: "full-test-agent",
 		Err:     ErrProviderError,
@@ -254,11 +254,11 @@ func TestAgentError_AllFieldsSet(t *testing.T) {
 	assert.Equal(t, "agent full-test-agent: RunStream: provider error", agentErr.Error())
 }
 
-func TestAgentError_ImplementsErrorInterface(t *testing.T) {
+func TestError_ImplementsErrorInterface(t *testing.T) {
 	// Arrange
-	var _ error = &AgentError{}
+	var _ error = &Error{}
 
 	// Act & Assert - compilation proves implementation
-	agentErr := NewAgentError("Test", "agent-id", ErrInvalidInput)
+	agentErr := NewError("Test", "agent-id", ErrInvalidInput)
 	assert.Implements(t, (*error)(nil), agentErr)
 }
