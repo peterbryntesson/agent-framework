@@ -71,7 +71,7 @@ Sessions maintain conversation state across multiple agent runs:
 The GetService method enables extensibility through a service locator pattern.
 Use the generic [GetService] helper for type-safe service retrieval:
 
-	logger, ok := agent.GetService[Logger](agent)
+	logger, ok := GetService[Logger](agent)
 	if ok {
 		logger.Info("Agent running")
 	}
