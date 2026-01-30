@@ -297,10 +297,10 @@ func TestContentDelta_AllFields(t *testing.T) {
 
 func TestUsageDetails_AllFields(t *testing.T) {
 	usage := &UsageDetails{
-		InputTokens:    100,
-		OutputTokens:   50,
-		TotalTokens:    150,
-		CachedTokens:   20,
+		InputTokens:     100,
+		OutputTokens:    50,
+		TotalTokens:     150,
+		CachedTokens:    20,
 		ReasoningTokens: 10,
 	}
 
