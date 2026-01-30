@@ -229,3 +229,60 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
   * Reason: Idiomatic Go prefers iota-based int enums for compile-time type safety and switch exhaustiveness checking
 * `ContentDelta.Role` uses `string` instead of `chat.Role`
   * Reason: `chat.Role` type deferred to Feature 1.3 (Chat Client Abstractions); current implementation uses string for flexibility
+
+---
+
+## User Story 1.2.3: Implement Session Interface
+
+**Date**: 2026-01-30
+
+### Added
+
+* go/agent/session_test.go - Comprehensive unit tests for InMemorySession with:
+  * `TestNewInMemorySession_GeneratesUUID` - verifies UUID generation (36-char format)
+  * `TestNewInMemorySession_GeneratesUniqueIDs` - verifies unique IDs across sessions
+  * `TestNewInMemorySession_InitializesEmptyMessages` - verifies empty initial state
+  * `TestNewInMemorySessionWithID_UsesProvidedID` - verifies custom ID support
+  * `TestInMemorySession_AddMessage_AppendsMessage` - verifies message addition
+  * `TestInMemorySession_AddMessage_PreservesOrder` - verifies FIFO message ordering
+  * `TestInMemorySession_Messages_ReturnsCopy` - verifies defensive copy semantics
+  * `TestInMemorySession_Serialize_ProducesValidJSON` - verifies JSON serialization
+  * `TestRestoreInMemorySession_RestoresState` - verifies session restoration
+  * `TestRestoreInMemorySession_InvalidJSON_ReturnsError` - verifies error handling
+  * `TestInMemorySession_GetService_ReturnsNilForUnregistered` - verifies nil for missing services
+  * `TestInMemorySession_RegisterService_AllowsRetrieval` - verifies service registration/retrieval
+  * `TestInMemorySession_ConcurrentAccess_IsThreadSafe` - verifies thread-safe writes
+  * `TestInMemorySession_ConcurrentReadWrite_IsThreadSafe` - verifies concurrent read/write safety
+  * `TestInMemorySession_ImplementsSessionInterface` - verifies interface compliance
+  * `TestInMemorySession_SerializeDeserializeRoundtrip_PreservesData` - verifies full roundtrip
+
+### Modified
+
+* go/go.mod - Added `github.com/google/uuid v1.6.0` dependency for UUID generation
+* go/go.sum - Updated with uuid package checksums
+* go/agent/session.go - Implemented InMemorySession with:
+  * Added `sync` package import for mutex-based thread safety
+  * Added `github.com/google/uuid` package import for UUID generation
+  * Removed outdated comment referencing User Story 1.2.3
+  * Added `inMemorySessionState` struct for JSON serialization (ID, Messages fields)
+  * Added `InMemorySession` struct with:
+    * `mu sync.RWMutex` for thread-safe access
+    * `id string` for session identifier
+    * `messages []Message` for conversation history
+    * `services map[reflect.Type]interface{}` for service registration
+  * Added `NewInMemorySession()` constructor generating UUID via `uuid.New().String()`
+  * Added `NewInMemorySessionWithID(id string)` constructor for custom IDs
+  * Added `RestoreInMemorySession(data json.RawMessage)` for deserializing sessions
+  * Implemented `ID()` method with read lock
+  * Implemented `Messages()` method returning defensive copy with read lock
+  * Implemented `AddMessage(msg Message)` method with write lock
+  * Implemented `Serialize()` method producing JSON with read lock
+  * Implemented `GetService(serviceType reflect.Type)` method with read lock
+  * Added `RegisterService(serviceType reflect.Type, service interface{})` method with write lock
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test -v ./agent/... -run Session` - All 16 tests passed
+* `go test -cover ./...` - 60.0% statement coverage (agent package)
