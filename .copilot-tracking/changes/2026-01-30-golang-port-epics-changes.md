@@ -6,12 +6,28 @@
 
 ## Summary
 
-Implementation of User Story 1.1.1: Initialize Go Module for the Microsoft Agent Framework Go port.
+Implementation of User Stories 1.1.1 and 1.1.2 for the Microsoft Agent Framework Go port:
+
+* User Story 1.1.1: Initialize Go Module
+* User Story 1.1.2: Configure CI Pipeline
 
 ## Changes
 
 ### Added
 
+* .github/workflows/go-build-and-test.yml - GitHub Actions CI/CD pipeline with:
+  * Triggers on PR and push to main/feature branches
+  * Path filtering to run only on go/ directory changes
+  * Multi-platform matrix (ubuntu, windows, macos)
+  * Go build, vet, and test with race detection
+  * golangci-lint integration for comprehensive linting
+  * Coverage threshold enforcement at 90%
+  * Coverage artifact upload and HTML report generation
+* go/.golangci.yml - Linter configuration with:
+  * 20+ enabled linters including errcheck, gosimple, govet, staticcheck
+  * Cyclomatic complexity limit of 15
+  * Test file exclusions for dupl, gosec, goconst
+  * Revive rules for Go best practices
 * go/go.mod - Go module definition with:
   * Module path: `github.com/microsoft/agent-framework-go`
   * Go version constraint: 1.22.0
