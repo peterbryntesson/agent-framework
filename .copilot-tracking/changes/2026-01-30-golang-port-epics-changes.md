@@ -6,10 +6,11 @@
 
 ## Summary
 
-Implementation of User Stories 1.1.1 and 1.1.2 for the Microsoft Agent Framework Go port:
+Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent Framework Go port:
 
 * User Story 1.1.1: Initialize Go Module
 * User Story 1.1.2: Configure CI Pipeline
+* User Story 1.1.3: Create Project Documentation
 
 ## Changes
 
@@ -37,6 +38,12 @@ Implementation of User Stories 1.1.1 and 1.1.2 for the Microsoft Agent Framework
 * go/doc.go - Root package documentation with SDK overview
 * go/observability/otel.go - Initial OpenTelemetry integration with Tracer() and Meter() functions
 * go/observability/otel_test.go - Unit tests for observability package
+* go/README.md - Project documentation with:
+  * Installation instructions via `go get`
+  * Basic usage examples: simple agent, streaming, tools, chat client
+  * OpenTelemetry observability setup example
+  * Package structure overview
+  * Links to pkg.go.dev, MS Learn documentation, and design documents
 
 ### Modified
 
