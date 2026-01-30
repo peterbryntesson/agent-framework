@@ -286,3 +286,47 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * `go vet ./...` - Passed
 * `go test -v ./agent/... -run Session` - All 16 tests passed
 * `go test -cover ./...` - 60.0% statement coverage (agent package)
+
+---
+
+## User Story 1.2.4: Implement Options Pattern
+
+**Date**: 2026-01-30
+
+### Added
+
+* go/agent/options_test.go - Comprehensive unit tests for functional options with:
+  * `TestApplyRunOptions_DefaultConfig` - verifies default configuration values
+  * `TestApplyRunOptions_NilOption` - verifies nil option handling without panic
+  * `TestWithSession_SetsSession` - verifies session assignment
+  * `TestWithSession_NilSession` - verifies nil session handling
+  * `TestWithTools_AddsSingleTool` - verifies single tool addition
+  * `TestWithTools_AddsMultipleTools` - verifies multiple tool addition
+  * `TestWithTools_Accumulates` - verifies tool accumulation across calls
+  * `TestWithTools_EmptyVariadic` - verifies empty variadic handling
+  * `TestWithMaxTokens_SetsValue` - verifies max tokens assignment
+  * `TestWithMaxTokens_ZeroValue` - verifies zero value handling
+  * `TestWithMaxTokens_NegativeValue` - verifies negative value handling
+  * `TestWithTemperature_SetsValue` - verifies temperature assignment
+  * `TestWithTemperature_ZeroValue` - verifies zero temperature handling
+  * `TestWithTemperature_MaxValue` - verifies high temperature values
+  * `TestWithMetadata_AddsEntries` - verifies metadata addition
+  * `TestWithMetadata_MergesMultipleCalls` - verifies metadata merging
+  * `TestWithMetadata_OverwritesDuplicateKeys` - verifies key overwrite behavior
+  * `TestWithMetadata_EmptyMap` - verifies empty map handling
+  * `TestWithMetadata_NilMap` - verifies nil map handling
+  * `TestApplyRunOptions_CombinedOptions` - verifies all options combined
+  * `TestApplyRunOptions_OptionOrder` - verifies later options override earlier
+  * `TestRunOptionType` - verifies custom RunOption functions work
+  * `TestRunConfig_FieldsAccessible` - verifies all RunConfig fields accessible
+
+### Modified
+
+(none - implementation was complete from User Story 1.2.1)
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test -v ./agent/... -run "With|RunOption|RunConfig|ApplyRunOptions"` - All 23 tests passed
+* `go test -cover ./...` - 86.7% statement coverage (agent package, up from 60.0%)
