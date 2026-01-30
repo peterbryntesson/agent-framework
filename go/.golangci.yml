@@ -17,9 +17,9 @@ linters:
     - unused
     # Additional recommended linters
     - bodyclose
+    - copyloopvar
     - dogsled
     - dupl
-    - exportloopref
     - gochecknoinits
     - goconst
     - gocritic

@@ -60,9 +60,322 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * Created observability package with minimal implementation
   * Reason: Needed to ensure OpenTelemetry dependencies are actually required by the module (go mod tidy removes unused dependencies)
 
-## Validation Results
+---
+
+## User Story 1.2.1: Define Agent Interface
+
+**Date**: 2026-01-30
+
+### Added
+
+* go/agent/agent.go - Core Agent interface definition with:
+  * `Agent` interface with ID(), Name(), Description(), Metadata() identity methods
+  * Run(ctx, messages, opts...) (*Response, error) for synchronous execution
+  * RunStream(ctx, messages, opts...) (<-chan ResponseUpdate, error) for streaming
+  * NewSession(ctx) (Session, error) for creating new conversation sessions
+  * RestoreSession(ctx, data) (Session, error) for deserializing persisted sessions
+  * GetService(serviceType) interface{} for service locator pattern extensibility
+  * Generic GetService[T](agent) helper function for type-safe service retrieval
+* go/agent/metadata.go - AIAgentMetadata struct with:
+  * ProviderName field for OpenTelemetry semantic conventions
+  * NewAIAgentMetadata(providerName) constructor
+* go/agent/message.go - Message type stub with Role and Content fields
+* go/agent/response.go - Response types with:
+  * Response struct with Messages, Usage, FinishReason, SessionState, Metadata
+  * Text() method for concatenating message content
+  * ResponseUpdate struct for streaming with Kind, Delta, Message, Metadata
+  * UpdateKind constants: ContentDelta, ToolCall, ToolResult, MessageComplete, Error, Done
+  * ContentDelta struct with Role, TextDelta, ToolCallID, Name, ArgsDelta
+  * FinishReason constants: Stop, Length, ToolCalls, ContentFilter
+  * UsageDetails struct for token tracking
+* go/agent/session.go - Session interface with:
+  * ID(), Messages(), AddMessage(), Serialize(), GetService() methods
+* go/agent/options.go - Functional options pattern with:
+  * RunOption function type
+  * runConfig internal configuration struct
+  * WithSession, WithTools, WithMaxTokens, WithTemperature, WithMetadata options
+  * applyOptions and defaultRunConfig helpers
+* go/agent/doc.go - Package documentation with:
+  * Overview of Agent interface
+  * Usage examples for Run, RunStream, session management
+  * Service resolution patterns
+  * Option configuration examples
+
+### Validation Results
 
 * `go build ./...` - Passed
-* `go test ./...` - Passed (observability tests: 6.130s)
-* Module path verified: `github.com/microsoft/agent-framework-go`
-* Go version constraint: 1.22.0 ✓
+* `go vet ./...` - Passed
+* golangci-lint - Not installed locally (CI will validate)
+
+---
+
+## User Story 1.2.2: Implement Response Types
+
+**Date**: 2026-01-30
+
+### Added
+
+(none - types already existed as stubs)
+
+### Modified
+
+* go/agent/response.go - Completed response types implementation with:
+  * Added `time` package import for timestamp fields
+  * Added `AsyncRunStatus` type (string-based enum) with status constants:
+    * `StatusQueued` - run is waiting to be processed
+    * `StatusInProgress` - run is currently executing
+    * `StatusRequiresAction` - run needs user input (e.g., tool approval)
+    * `StatusCompleted` - run finished successfully
+    * `StatusCancelled` - run was cancelled by the user
+    * `StatusFailed` - run encountered an unrecoverable error
+    * `StatusExpired` - run exceeded its time limit
+  * Added `IsTerminal()` method on `AsyncRunStatus` returning true for terminal states
+  * Added `AsyncRunError` struct with Code and Message fields (JSON-tagged)
+  * Added `AsyncRunContent` struct for long-running operations with:
+    * `RunID` - unique identifier for the async run
+    * `Status` - current state of the async run
+    * `ThreadID` - conversation thread associated with this run
+    * `ExpiresAt` - when the run will expire if not completed
+    * `StartedAt` - when the run started processing
+    * `CompletedAt` - when the run finished
+    * `Error` - error details if the run failed
+    * All fields with proper JSON tags for serialization
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go fmt ./agent/...` - Passed (no changes needed)
+* golangci-lint - Not installed locally (CI will validate)
+
+---
+
+## Review Fix: User Story 1.2.1 Lint Issues
+
+**Date**: 2026-01-30
+
+### Modified
+
+* go/.golangci.yml - Replaced deprecated `exportloopref` linter with `copyloopvar`
+* go/agent/agent.go - Applied `go fmt` formatting fixes
+* go/agent/doc.go - Applied `go fmt` formatting fixes
+* go/agent/message.go - Applied `go fmt` formatting fixes
+* go/agent/metadata.go - Applied `go fmt` formatting fixes
+* go/agent/options.go - Applied multiple fixes:
+  * Applied `go fmt` formatting
+  * Exported `runConfig` as `RunConfig` for use by agent implementations
+  * Renamed `applyOptions` to `ApplyRunOptions` and exported it
+  * Removed unused `defaultRunConfig` function (merged into `ApplyRunOptions`)
+  * Updated all `With*` option functions to use exported `RunConfig` type
+  * Optimized struct field alignment via `fieldalignment -fix`
+* go/agent/response.go - Applied multiple fixes:
+  * Applied `go fmt` formatting
+  * Optimized `Response` struct field alignment via `fieldalignment -fix`
+  * Optimized `ResponseUpdate` struct field alignment via `fieldalignment -fix`
+* go/agent/session.go - Applied `go fmt` formatting fixes
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `golangci-lint run ./agent/...` - Passed (0 issues)
+---
+
+## Review Fix: User Story 1.2.2 Design Alignment
+
+**Date**: 2026-01-30
+
+### Added
+
+* go/agent/response_test.go - Comprehensive unit tests for response types with:
+  * `TestResponseText_EmptyMessages` - verifies empty string for empty messages
+  * `TestResponseText_NilResponse` - verifies nil safety
+  * `TestResponseText_SingleMessage` - verifies single message concatenation
+  * `TestResponseText_MultipleMessages` - verifies multiple message concatenation
+  * `TestResponseFields` - verifies all Response struct fields including new extension fields
+  * `TestAsyncRunStatusIsTerminal_TerminalStatuses` - verifies terminal status detection
+  * `TestAsyncRunStatusIsTerminal_NonTerminalStatuses` - verifies non-terminal status detection
+  * `TestAsyncRunStatusIsTerminal_UnknownStatus` - verifies unknown status handling
+  * `TestAsyncRunContent_AllFields` - verifies AsyncRunContent struct fields
+  * `TestAsyncRunContent_WithError` - verifies error handling in async run content
+  * `TestUpdateKindConstants` - verifies all UpdateKind constants are distinct and ordered
+  * `TestFinishReasonConstants` - verifies all FinishReason constants are distinct
+  * `TestResponseUpdate_AllFields` - verifies all ResponseUpdate fields including new ones
+  * `TestContentDelta_AllFields` - verifies ContentDelta struct fields
+  * `TestUsageDetails_AllFields` - verifies UsageDetails struct fields
+  * `TestAsyncRunStatusValues` - verifies string values match expected API format
+
+### Modified
+
+* go/agent/response.go - Added missing fields per design specification:
+  * Added `UpdateKindUsage` constant to UpdateKind for usage-only streaming updates
+  * Added `Usage *UsageDetails` field to ResponseUpdate for streaming token usage
+  * Added `FinishReason FinishReason` field to ResponseUpdate for completion reason
+  * Added `Error error` field to ResponseUpdate for detailed error information
+  * Added `ContinuationToken string` field to Response for resuming long-running operations
+  * Added `AdditionalProperties map[string]interface{}` field to Response for extensibility
+  * Added `RawRepresentation interface{}` field to Response for provider-specific data access
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test ./agent/... -v` - All 16 tests passed
+* `go test ./agent/... -cover` - 27.3% statement coverage (covers response types)
+
+### Design Deviations (Intentional)
+
+* `UpdateKind` uses `int` enum (iota) instead of `string`
+  * Reason: Idiomatic Go prefers iota-based int enums for compile-time type safety and switch exhaustiveness checking
+* `ContentDelta.Role` uses `string` instead of `chat.Role`
+  * Reason: `chat.Role` type deferred to Feature 1.3 (Chat Client Abstractions); current implementation uses string for flexibility
+
+---
+
+## User Story 1.2.3: Implement Session Interface
+
+**Date**: 2026-01-30
+
+### Added
+
+* go/agent/session_test.go - Comprehensive unit tests for InMemorySession with:
+  * `TestNewInMemorySession_GeneratesUUID` - verifies UUID generation (36-char format)
+  * `TestNewInMemorySession_GeneratesUniqueIDs` - verifies unique IDs across sessions
+  * `TestNewInMemorySession_InitializesEmptyMessages` - verifies empty initial state
+  * `TestNewInMemorySessionWithID_UsesProvidedID` - verifies custom ID support
+  * `TestInMemorySession_AddMessage_AppendsMessage` - verifies message addition
+  * `TestInMemorySession_AddMessage_PreservesOrder` - verifies FIFO message ordering
+  * `TestInMemorySession_Messages_ReturnsCopy` - verifies defensive copy semantics
+  * `TestInMemorySession_Serialize_ProducesValidJSON` - verifies JSON serialization
+  * `TestRestoreInMemorySession_RestoresState` - verifies session restoration
+  * `TestRestoreInMemorySession_InvalidJSON_ReturnsError` - verifies error handling
+  * `TestInMemorySession_GetService_ReturnsNilForUnregistered` - verifies nil for missing services
+  * `TestInMemorySession_RegisterService_AllowsRetrieval` - verifies service registration/retrieval
+  * `TestInMemorySession_ConcurrentAccess_IsThreadSafe` - verifies thread-safe writes
+  * `TestInMemorySession_ConcurrentReadWrite_IsThreadSafe` - verifies concurrent read/write safety
+  * `TestInMemorySession_ImplementsSessionInterface` - verifies interface compliance
+  * `TestInMemorySession_SerializeDeserializeRoundtrip_PreservesData` - verifies full roundtrip
+
+### Modified
+
+* go/go.mod - Added `github.com/google/uuid v1.6.0` dependency for UUID generation
+* go/go.sum - Updated with uuid package checksums
+* go/agent/session.go - Implemented InMemorySession with:
+  * Added `sync` package import for mutex-based thread safety
+  * Added `github.com/google/uuid` package import for UUID generation
+  * Removed outdated comment referencing User Story 1.2.3
+  * Added `inMemorySessionState` struct for JSON serialization (ID, Messages fields)
+  * Added `InMemorySession` struct with:
+    * `mu sync.RWMutex` for thread-safe access
+    * `id string` for session identifier
+    * `messages []Message` for conversation history
+    * `services map[reflect.Type]interface{}` for service registration
+  * Added `NewInMemorySession()` constructor generating UUID via `uuid.New().String()`
+  * Added `NewInMemorySessionWithID(id string)` constructor for custom IDs
+  * Added `RestoreInMemorySession(data json.RawMessage)` for deserializing sessions
+  * Implemented `ID()` method with read lock
+  * Implemented `Messages()` method returning defensive copy with read lock
+  * Implemented `AddMessage(msg Message)` method with write lock
+  * Implemented `Serialize()` method producing JSON with read lock
+  * Implemented `GetService(serviceType reflect.Type)` method with read lock
+  * Added `RegisterService(serviceType reflect.Type, service interface{})` method with write lock
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test -v ./agent/... -run Session` - All 16 tests passed
+* `go test -cover ./...` - 60.0% statement coverage (agent package)
+
+---
+
+## User Story 1.2.4: Implement Options Pattern
+
+**Date**: 2026-01-30
+
+### Added
+
+* go/agent/options_test.go - Comprehensive unit tests for functional options with:
+  * `TestApplyRunOptions_DefaultConfig` - verifies default configuration values
+  * `TestApplyRunOptions_NilOption` - verifies nil option handling without panic
+  * `TestWithSession_SetsSession` - verifies session assignment
+  * `TestWithSession_NilSession` - verifies nil session handling
+  * `TestWithTools_AddsSingleTool` - verifies single tool addition
+  * `TestWithTools_AddsMultipleTools` - verifies multiple tool addition
+  * `TestWithTools_Accumulates` - verifies tool accumulation across calls
+  * `TestWithTools_EmptyVariadic` - verifies empty variadic handling
+  * `TestWithMaxTokens_SetsValue` - verifies max tokens assignment
+  * `TestWithMaxTokens_ZeroValue` - verifies zero value handling
+  * `TestWithMaxTokens_NegativeValue` - verifies negative value handling
+  * `TestWithTemperature_SetsValue` - verifies temperature assignment
+  * `TestWithTemperature_ZeroValue` - verifies zero temperature handling
+  * `TestWithTemperature_MaxValue` - verifies high temperature values
+  * `TestWithMetadata_AddsEntries` - verifies metadata addition
+  * `TestWithMetadata_MergesMultipleCalls` - verifies metadata merging
+  * `TestWithMetadata_OverwritesDuplicateKeys` - verifies key overwrite behavior
+  * `TestWithMetadata_EmptyMap` - verifies empty map handling
+  * `TestWithMetadata_NilMap` - verifies nil map handling
+  * `TestApplyRunOptions_CombinedOptions` - verifies all options combined
+  * `TestApplyRunOptions_OptionOrder` - verifies later options override earlier
+  * `TestRunOptionType` - verifies custom RunOption functions work
+  * `TestRunConfig_FieldsAccessible` - verifies all RunConfig fields accessible
+
+### Modified
+
+(none - implementation was complete from User Story 1.2.1)
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test -v ./agent/... -run "With|RunOption|RunConfig|ApplyRunOptions"` - All 23 tests passed
+* `go test -cover ./...` - 86.7% statement coverage (agent package, up from 60.0%)
+
+---
+
+## User Story 1.2.5: Implement Error Types
+
+**Date**: 2026-01-30
+
+### Added
+
+* go/agent/errors.go - Agent-specific error types with:
+  * Sentinel errors: `ErrSessionNotFound`, `ErrInvalidInput`, `ErrRateLimited`, `ErrProviderError`, `ErrToolInvocationFailed`
+  * `AgentError` struct with Op, AgentID, Err fields for structured error context
+  * `Error()` method returning formatted message with agent and operation context
+  * `Unwrap()` method for compatibility with `errors.Is` and `errors.As`
+  * `NewAgentError(op, agentID, err)` constructor function
+  * `IsRetryable(error) bool` helper function identifying transient errors (rate limiting, provider errors)
+* go/agent/errors_test.go - Comprehensive unit tests with:
+  * `TestSentinelErrors_AreDistinct` - verifies all sentinel errors are unique
+  * `TestSentinelErrors_HaveDescriptiveMessages` - verifies error message content
+  * `TestAgentError_ErrorWithAgentID` - verifies formatted message with agent ID
+  * `TestAgentError_ErrorWithoutAgentID` - verifies fallback format without agent ID
+  * `TestAgentError_Unwrap` - verifies underlying error extraction
+  * `TestAgentError_WorksWithErrorsIs` - verifies `errors.Is` compatibility
+  * `TestAgentError_WorksWithErrorsAs` - verifies `errors.As` compatibility
+  * `TestAgentError_NestedWrapping` - verifies deeply nested error chains
+  * `TestNewAgentError_CreatesCorrectError` - verifies constructor
+  * `TestIsRetryable_NilError` - verifies nil safety
+  * `TestIsRetryable_RateLimited` - verifies rate limit is retryable
+  * `TestIsRetryable_WrappedRateLimited` - verifies wrapped rate limit detection
+  * `TestIsRetryable_ProviderError` - verifies provider error is retryable
+  * `TestIsRetryable_WrappedProviderError` - verifies wrapped provider error detection
+  * `TestIsRetryable_SessionNotFound` - verifies session not found is not retryable
+  * `TestIsRetryable_InvalidInput` - verifies invalid input is not retryable
+  * `TestIsRetryable_ToolInvocationFailed` - verifies tool failure is not retryable
+  * `TestIsRetryable_UnknownError` - verifies unknown errors are not retryable
+  * `TestIsRetryable_DeeplyNestedRetryable` - verifies nested retryable detection
+  * `TestAgentError_AllFieldsSet` - verifies struct field access
+  * `TestAgentError_ImplementsErrorInterface` - verifies interface compliance
+
+### Modified
+
+(none)
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test -v ./agent/... -run "Error|Sentinel|Retryable"` - All 21 tests passed
+* `go test -cover ./...` - 89.7% statement coverage (agent package, up from 86.7%)
