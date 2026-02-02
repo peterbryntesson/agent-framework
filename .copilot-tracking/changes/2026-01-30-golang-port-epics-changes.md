@@ -379,3 +379,200 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * `go vet ./...` - Passed
 * `go test -v ./agent/... -run "Error|Sentinel|Retryable"` - All 21 tests passed
 * `go test -cover ./...` - 89.7% statement coverage (agent package, up from 86.7%)
+
+---
+
+## User Story 1.3.1: Define ChatClient Interface
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/chat/client.go - Chat client interface with:
+  * `Client` interface with GetResponse, GetStreamingResponse, Metadata methods
+  * `GetResponse(ctx, messages, options) (*Response, error)` signature for synchronous completions
+  * `GetStreamingResponse(ctx, messages, options) (<-chan ResponseUpdate, error)` signature for streaming
+  * `ClientMetadata` struct with ProviderName, ModelID, EndpointURI fields
+  * `Options` struct with MaxTokens, Temperature, TopP, StopSequences, ResponseFormat, Metadata
+  * `NewOptions()` constructor for creating Options with initialized Metadata map
+* go/chat/message.go - Message types with:
+  * `Role` type (string-based) with constants: RoleSystem, RoleUser, RoleAssistant, RoleTool
+  * `Message` struct with Role, Content, Name, ToolCallID, CreatedAt, RawRepresentation
+  * `NewUserMessage(content)`, `NewSystemMessage(content)`, `NewAssistantMessage(content)` constructors
+* go/chat/response.go - Response types with:
+  * `Response` struct with Message, FinishReason, Usage, RawRepresentation
+  * `Text()` convenience method on Response
+  * `ResponseUpdate` struct with Kind, Delta, Message, Usage, FinishReason, Error, Metadata
+  * `UpdateKind` constants: ContentDelta, ToolCall, ToolResult, MessageComplete, Usage, Error, Done
+  * `ContentDelta` struct with Role, TextDelta, ToolCallID, Name, ArgsDelta
+  * `FinishReason` constants: Stop, Length, ToolCalls, ContentFilter
+* go/chat/usage.go - Usage tracking with:
+  * `UsageDetails` struct with InputTokens, OutputTokens, TotalTokens, CachedTokens, ReasoningTokens
+* go/chat/doc.go - Package documentation with:
+  * Overview of Client interface
+  * Usage examples for GetResponse and GetStreamingResponse
+  * Options configuration examples
+  * Provider metadata access examples
+  * Message creation examples
+  * Links to provider subpackages
+* go/chat/client_test.go - Comprehensive unit tests with:
+  * `mockClient` test implementation of Client interface
+  * `TestClientMetadata_Fields` - verifies metadata struct fields
+  * `TestClientInterface_GetResponse` - verifies synchronous response handling
+  * `TestClientInterface_GetStreamingResponse` - verifies streaming response handling
+  * `TestClientInterface_Metadata` - verifies metadata retrieval
+  * `TestOptions_NewOptions` - verifies Options constructor
+  * `TestOptions_Fields` - verifies all Options fields
+  * `TestResponseText_NilResponse` - verifies nil safety
+  * `TestResponseText_EmptyContent` - verifies empty content handling
+  * `TestResponseText_WithContent` - verifies text extraction
+  * `TestResponse_AllFields` - verifies all Response fields
+  * `TestUpdateKind_Constants` - verifies UpdateKind enum values
+  * `TestFinishReason_Constants` - verifies FinishReason enum values
+  * `TestRole_Constants` - verifies Role string values
+  * `TestNewUserMessage` - verifies user message constructor
+  * `TestNewSystemMessage` - verifies system message constructor
+  * `TestNewAssistantMessage` - verifies assistant message constructor
+  * `TestMessage_AllFields` - verifies all Message fields
+  * `TestUsageDetails_AllFields` - verifies all UsageDetails fields
+  * `TestContentDelta_AllFields` - verifies all ContentDelta fields
+  * `TestResponseUpdate_AllFields` - verifies all ResponseUpdate fields
+
+### Modified
+
+(none)
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go fmt ./chat/...` - Applied formatting
+* `go test -v ./chat/...` - All 20 tests passed
+* golangci-lint - Not installed locally (CI will validate)
+
+---
+
+## User Story 1.3.2: Implement Message Types
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/chat/content.go - Content interface and type implementations with:
+  * `ContentType` string type with constants: ContentTypeText, ContentTypeImage, ContentTypeToolCall, ContentTypeToolResult
+  * `Content` interface with Type() method and sealed marker pattern using unexported `sealed()` method
+  * `contentBase` unexported struct for interface sealing
+  * `TextContent` struct with Text field and JSON tags
+  * `NewTextContent(text)` constructor
+  * `ImageContent` struct with URL, Base64Data, MediaType, Detail fields
+  * `NewImageContentFromURL(url)` and `NewImageContentFromBase64(data, mediaType)` constructors
+  * `ToolCall` struct with ID, Name, Arguments (json.RawMessage) fields
+  * `ToolCallContent` struct wrapping ToolCall with JSON tags
+  * `NewToolCallContent(id, name, arguments)` constructor
+  * `ToolResultContent` struct with ToolCallID, Content, IsError fields
+  * `NewToolResultContent(toolCallID, content)` and `NewToolResultContentWithError(toolCallID, errorMessage)` constructors
+* go/chat/content_test.go - Comprehensive unit tests with 33 test cases:
+  * ContentType constant tests
+  * TextContent type, fields, and constructor tests
+  * ImageContent type, fields, URL and Base64 constructor tests
+  * ToolCallContent type, ToolCall fields, and constructor tests
+  * ToolResultContent type, fields, and both constructor tests
+  * Content interface implementation verification
+  * ContentType distinctness verification
+  * Message.Text() method tests for nil, empty, single, multiple, mixed, and no-text content scenarios
+  * NewToolMessage constructor test
+  * NewAssistantMessageWithToolCalls constructor test
+  * NewMessageWithContents constructor test
+  * Message.ToolCalls field test
+  * JSON serialization tests for all content types
+
+### Modified
+
+* go/chat/message.go - Updated Message struct and constructors:
+  * Replaced `Content string` field with `Contents []Content` slice for structured content
+  * Added `ToolCalls []ToolCall` field for assistant tool call requests
+  * Added `Text()` method on Message to concatenate all TextContent items
+  * Updated `NewUserMessage(text)` to create single TextContent item
+  * Updated `NewSystemMessage(text)` to create single TextContent item
+  * Updated `NewAssistantMessage(text)` to create single TextContent item
+  * Added `NewToolMessage(toolCallID, content)` constructor for tool result messages
+  * Added `NewAssistantMessageWithToolCalls(toolCalls)` constructor for tool call messages
+  * Added `NewMessageWithContents(role, contents...)` constructor for multi-content messages
+  * Added `strings` package import for Text() method
+* go/chat/response.go - Updated Response.Text() method:
+  * Changed to call Message.Text() instead of accessing deprecated Message.Content field
+* go/chat/client_test.go - Updated existing tests for new Content types:
+  * Updated mockClient.GetResponse to use Contents slice
+  * Updated TestClientInterface_GetResponse to use Text() method
+  * Updated TestResponseText_EmptyContent to use empty Contents slice
+  * Updated TestResponseText_WithContent to use NewTextContent
+  * Updated TestResponse_AllFields to use Contents slice
+  * Updated TestNewUserMessage to verify Contents and Text()
+  * Updated TestNewSystemMessage to verify Contents and Text()
+  * Updated TestNewAssistantMessage to verify Contents and Text()
+  * Updated TestMessage_AllFields to use Contents and Text()
+  * Updated TestResponseUpdate_AllFields to use Contents and Text()
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./chat/...` - Passed
+* `go fmt ./chat/...` - Applied formatting to content.go and content_test.go
+* `go test ./chat/... -v` - All 53 tests passed
+* `go test ./chat/... -cover` - 100.0% statement coverage
+* `go test ./... -cover` - All packages passed (agent: 89.7%, chat: 100.0%, observability: 100.0%)
+
+### Design Notes
+
+* The Content interface uses Go's sealed interface pattern with an unexported `sealed()` method to prevent external implementations
+* The `contentBase` unexported struct provides the sealed marker implementation for all content types
+* `Message.Text()` method concatenates all TextContent items, ignoring other content types (images, tool calls)
+* JSON tags on content structs use snake_case to match common API conventions
+* ToolCall is a separate struct from ToolCallContent to allow reuse in Message.ToolCalls field
+
+---
+
+## User Story 1.3.3: Implement Response Types
+
+**Date**: 2026-02-02
+
+### Added
+
+(none - types already exist in response.go)
+
+### Verified
+
+* go/chat/response.go - Chat response types already implemented with:
+  * `Response` struct with Message, FinishReason, Usage (pointer to UsageDetails), RawRepresentation fields
+  * `Text()` convenience method on Response delegating to Message.Text()
+  * `ResponseUpdate` struct for streaming with Kind, Delta, Message, Usage, FinishReason, Error, Metadata fields
+  * `UpdateKind` type (int-based enum) with constants:
+    * `UpdateKindContentDelta` - incremental content available
+    * `UpdateKindToolCall` - tool call is being made
+    * `UpdateKindToolResult` - tool result is available
+    * `UpdateKindMessageComplete` - complete message is available
+    * `UpdateKindUsage` - token usage information available
+    * `UpdateKindError` - error occurred
+    * `UpdateKindDone` - stream is complete
+  * `ContentDelta` struct with Role, TextDelta, ToolCallID, Name, ArgsDelta fields
+  * `FinishReason` type (int-based enum) with constants:
+    * `FinishReasonStop` - normal completion
+    * `FinishReasonLength` - maximum token limit reached
+    * `FinishReasonToolCalls` - waiting for tool results
+    * `FinishReasonContentFilter` - content filtered by safety systems
+* go/chat/usage.go - UsageDetails struct already implemented with:
+  * InputTokens, OutputTokens, TotalTokens fields
+  * CachedTokens, ReasoningTokens optional fields
+
+### Validation Results
+
+* `go build ./chat/...` - Passed
+* `go test ./chat/... -v` - All 53 tests passed
+* `go test ./chat/... -cover` - 100.0% statement coverage
+
+### Design Notes
+
+* Response types in chat package parallel agent/response.go types but are tailored for chat client abstraction
+* FinishReason and UpdateKind use int-based enums for efficiency and switch statement optimization
+* ResponseUpdate includes FinishReason for completion updates and Error for error updates
+* Usage is a pointer in Response to allow nil when provider doesn't report usage
