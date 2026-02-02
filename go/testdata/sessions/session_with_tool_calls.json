@@ -1,0 +1,29 @@
+{
+  "id": "session_tools_xyz123",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant with access to weather and calendar tools."
+    },
+    {
+      "role": "user",
+      "content": "What's the weather in Seattle and do I have any meetings today?"
+    },
+    {
+      "role": "assistant",
+      "content": ""
+    },
+    {
+      "role": "tool",
+      "content": "{\"temperature\": 55, \"condition\": \"cloudy\", \"humidity\": 75}"
+    },
+    {
+      "role": "tool",
+      "content": "{\"meetings\": [{\"time\": \"10:00 AM\", \"title\": \"Team Standup\"}, {\"time\": \"2:00 PM\", \"title\": \"Project Review\"}]}"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's your update:\n\n**Weather in Seattle:**\n- Temperature: 55°F\n- Condition: Cloudy\n- Humidity: 75%\n\n**Today's Meetings:**\n1. 10:00 AM - Team Standup\n2. 2:00 PM - Project Review\n\nWould you like more details about either?"
+    }
+  ]
+}

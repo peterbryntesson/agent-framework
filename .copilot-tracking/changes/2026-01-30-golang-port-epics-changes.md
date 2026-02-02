@@ -692,3 +692,172 @@ Implementation of User Stories 1.1.1, 1.1.2, 1.1.3, and 1.4.2 for the Microsoft 
 * `go build ./internal/validation/...` - Passed
 * `go vet ./internal/validation/...` - Passed
 * `go test ./internal/validation/... -cover` - 100.0% statement coverage
+
+---
+
+## User Story 1.5.1: Create Mock Implementations
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/agent/mock_test.go - MockAgent implementation with:
+  * `MockAgent` struct implementing `agent.Agent` interface with configurable function fields
+  * `IDFunc`, `NameFunc`, `DescriptionFunc`, `MetadataFunc` for identity method customization
+  * `RunFunc`, `RunStreamFunc` for execution behavior customization
+  * `NewSessionFunc`, `RestoreSessionFunc` for session management customization
+  * `GetServiceFunc` for service locator customization
+  * `NewMockAgent()` constructor with default no-op behavior
+  * Fluent builder methods: `WithID()`, `WithName()`, `WithDescription()`, `WithResponse()`, `WithStreamUpdates()`, `WithSession()`
+  * Compile-time interface verification with `var _ agent.Agent = (*MockAgent)(nil)`
+
+* go/agent/mock_examples_test.go - Table-driven test patterns for MockAgent with:
+  * `TestMockAgent_Identity` - Tests identity methods (ID, Name, Description) with default and configured values
+  * `TestMockAgent_Run` - Tests Run method with configured responses, errors, and custom functions
+  * `TestMockAgent_RunStream` - Tests streaming with configured updates and error scenarios
+  * `TestMockAgent_Session` - Tests session creation with configured sessions and errors
+  * `TestMockAgent_ImplementsInterface` - Verifies interface compliance
+
+* go/chat/mock_test.go - MockChatClient implementation with:
+  * `MockChatClient` struct implementing `chat.Client` interface with configurable function fields
+  * `GetResponseFunc`, `GetStreamingResponseFunc`, `MetadataFunc` for customization
+  * `NewMockChatClient()` constructor with default no-op behavior
+  * Fluent builder methods: `WithMetadata()`, `WithResponse()`, `WithStreamingUpdates()`, `WithResponseFunc()`, `WithStreamingFunc()`
+  * Compile-time interface verification with `var _ chat.Client = (*MockChatClient)(nil)`
+
+* go/chat/mock_examples_test.go - Table-driven test patterns for MockChatClient with:
+  * `TestMockChatClient_GetResponse` - Tests GetResponse with configured responses, errors, and custom validation
+  * `TestMockChatClient_GetStreamingResponse` - Tests streaming with configured updates and error scenarios
+  * `TestMockChatClient_Metadata` - Tests metadata configuration
+  * `TestMockChatClient_ImplementsInterface` - Verifies interface compliance
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test ./... -count=1` - All tests passed
+  * github.com/microsoft/agent-framework-go/agent - 2.759s
+  * github.com/microsoft/agent-framework-go/chat - 2.826s
+
+---
+
+## Review Fix: User Story 1.5.1 Formatting
+
+**Date**: 2026-02-02
+
+### Modified
+
+* go/agent/mock_test.go - Applied `go fmt` formatting fixes
+* go/agent/mock_examples_test.go - Applied `go fmt` formatting fixes
+* go/chat/mock_test.go - Applied `go fmt` formatting fixes
+* go/chat/mock_examples_test.go - Applied `go fmt` formatting fixes
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test ./... -cover` - All tests passed
+  * agent: 89.7% statement coverage
+  * chat: 100.0% statement coverage
+  * internal/json: 100.0% statement coverage
+  * internal/validation: 100.0% statement coverage
+  * observability: 100.0% statement coverage
+
+### Review Summary
+
+User Story 1.5.1 meets all acceptance criteria:
+
+| Criterion | Status |
+|-----------|--------|
+| `MockAgent` implementing `Agent` interface with configurable function fields | ✅ Passed |
+| `MockChatClient` implementing `Client` interface with configurable function fields | ✅ Passed |
+| Table-driven test patterns established | ✅ Passed |
+
+---
+
+## User Story 1.5.2: Establish Test Fixtures
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/testdata/messages/ - Message fixture directory with:
+  * user_message.json - User message with text content
+  * system_message.json - System prompt message
+  * assistant_message.json - Assistant response message
+  * tool_message.json - Tool result message with JSON content
+  * assistant_with_tool_calls.json - Assistant message with tool call requests
+  * multi_content_message.json - Message with text and image content
+  * conversation.json - Multi-turn conversation array
+
+* go/testdata/responses/ - Response fixture directory with:
+  * simple_response.json - Basic response with usage
+  * response_with_metadata.json - Response with model metadata
+  * tool_call_response.json - Response with tool_calls finish reason
+  * truncated_response.json - Response with length finish reason
+  * async_run_in_progress.json - Async run in progress status
+  * async_run_completed.json - Async run completed status
+  * async_run_failed.json - Async run with error details
+
+* go/testdata/sessions/ - Session fixture directory with:
+  * empty_session.json - New session with no messages
+  * session_with_history.json - Session with basic conversation
+  * multi_turn_session.json - Extended multi-turn technical conversation
+  * session_with_tool_calls.json - Session with tool call history
+
+* go/testutil/doc.go - Package documentation with:
+  * Overview of fixture loading utilities
+  * Usage examples for LoadFixture and LoadFixtureAs
+  * Fixture category descriptions
+  * Test helper function documentation
+
+* go/testutil/fixtures.go - Fixture loading functions with:
+  * `ErrFixtureNotFound` sentinel error for missing files
+  * `ErrInvalidFixture` sentinel error for parse failures
+  * `TestDataDir()` - Returns absolute path to testdata directory using runtime.Caller
+  * `LoadFixture(path)` - Reads fixture file bytes with proper error handling
+  * `LoadFixtureAs(path, target)` - Reads and unmarshals fixture into target struct
+  * `MustLoadFixture(path)` - Panics on failure for test initialization
+  * `MustLoadFixtureAs(path, target)` - Panics on failure for test initialization
+  * `JSONEqual(a, b)` - Compares JSON semantic equality ignoring whitespace/order
+  * `FixtureExists(path)` - Checks if fixture file exists
+  * `ListFixtures(dir)` - Lists all fixture files in a subdirectory
+
+* go/testutil/fixtures_test.go - Comprehensive tests with 31 test cases:
+  * TestDataDir path and subdirectory verification
+  * LoadFixture for all message, response, and session fixtures
+  * LoadFixtureAs with valid and invalid targets
+  * MustLoadFixture and MustLoadFixtureAs panic behavior
+  * JSONEqual with identical, whitespace, key order, and value differences
+  * FixtureExists for existing and non-existing files
+  * ListFixtures for all subdirectories
+  * Sentinel error distinctness and message verification
+
+* go/Makefile - Development command automation with:
+  * build, test, test-verbose, test-race targets
+  * coverage and coverage-html targets for local coverage analysis
+  * lint, vet, fmt targets for code quality
+  * clean target for generated files
+  * help target with usage documentation
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go fmt ./testutil/...` - Applied formatting
+* `go test ./testutil/... -v` - All 31 tests passed
+* `go test ./... -cover` - All packages passed:
+  * agent: 89.7% statement coverage
+  * chat: 100.0% statement coverage
+  * internal/json: 100.0% statement coverage
+  * internal/validation: 100.0% statement coverage
+  * observability: 100.0% statement coverage
+  * testutil: 87.8% statement coverage
+
+### Design Notes
+
+* Test fixtures use snake_case JSON keys matching common API conventions
+* `TestDataDir()` uses `runtime.Caller` to reliably locate fixtures regardless of working directory
+* Fixture loading functions return sentinel errors for type-safe error checking with `errors.Is`
+* `MustLoad*` variants support test initialization where fixture loading must succeed
+* Makefile provides POSIX-style targets for cross-platform development automation
