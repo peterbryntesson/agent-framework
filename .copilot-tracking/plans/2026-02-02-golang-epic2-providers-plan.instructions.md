@@ -42,7 +42,7 @@ Detailed implementation plan for Epic 2 of the Go SDK port, covering LLM provide
 <!-- parallelizable: false -->
 <!-- Priority: Implement first as providers depend on tool types -->
 
-* [ ] Step 2.1.1: Define Tool interfaces and types
+* [x] Step 2.1.1: Define Tool interfaces and types
   * Details: .copilot-tracking/details/2026-02-02-golang-epic2-providers-details.md (Lines 30-120)
 * [ ] Step 2.1.2: Implement FunctionTool with reflection
   * Details: .copilot-tracking/details/2026-02-02-golang-epic2-providers-details.md (Lines 122-220)
