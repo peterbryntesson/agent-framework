@@ -20,6 +20,9 @@ Implementation of Epic 2 for the Go SDK port, covering LLM provider implementati
 * go/tool/function.go - FunctionTool implementation wrapping Go functions for AI model invocation with automatic signature validation, JSON Schema generation, and invocation counting; includes Func() decorator and FuncOption configuration pattern
 * go/tool/hosted.go - Hosted tool implementations for provider-hosted capabilities (HostedWebSearchTool, HostedCodeInterpreterTool, HostedFileSearchTool, HostedMCPTool, HostedImageGenerationTool) with configuration types, constructors, and ProviderConfig serialization aligned with Python HostedTool classes
 * go/tool/hosted_test.go - Comprehensive tests for hosted tool types covering interface compliance, ProviderConfig serialization, default names, and error handling (21 tests)
+* go/tool/errors.go - Tool-specific error types including sentinel errors (ErrUnknownTool, ErrInvalidArguments, ErrMaxIterations, ErrConsecutiveErrors, ErrInvocationDisabled, ErrToolTimeout) and structured error types (InvocationError, InvocationPanicError, UnknownToolError, ArgumentError) with proper error wrapping and Is/Unwrap support
+* go/tool/invoke.go - Invoker struct for safe tool invocation with panic recovery, timeout support, batch processing (sequential and parallel), context cancellation handling, tool management methods, and InvocationResult type for batch results
+* go/tool/invoke_test.go - Comprehensive tests for Invoker covering creation, invocation, unknown tool handling, panic recovery, batch processing, tool management, context cancellation, and InvocationResult helpers (26 tests)
 
 ### Modified
 
