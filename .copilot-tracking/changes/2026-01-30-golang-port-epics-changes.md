@@ -6,11 +6,12 @@
 
 ## Summary
 
-Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent Framework Go port:
+Implementation of User Stories 1.1.1, 1.1.2, 1.1.3, and 1.4.2 for the Microsoft Agent Framework Go port:
 
 * User Story 1.1.1: Initialize Go Module
 * User Story 1.1.2: Configure CI Pipeline
 * User Story 1.1.3: Create Project Documentation
+* User Story 1.4.2: Implement Validation Helpers
 
 ## Changes
 
@@ -620,3 +621,74 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * Uses reflection sparingly - only for nil pointer detection in MarshalToRawMessage and pointer validation in UnmarshalFromRawMessage
 * Sentinel errors follow Go error conventions with lowercase messages
 * Empty data handling returns nil error (no-op) to simplify caller code when data may be absent
+
+---
+
+## User Story 1.4.2: Implement Validation Helpers
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/internal/validation/validate.go - Input validation functions with:
+  * `RequireNotNil(v interface{}, name string) error` - Validates value is not nil
+    * Handles nil interface, nil pointer, nil slice, nil map, nil channel, nil func
+    * Returns structured ValidationError with field name and wrapped sentinel error
+  * `RequireNotEmpty(s string, name string) error` - Validates string is not empty
+    * Returns structured ValidationError for empty strings
+  * `ValidateMessages(messages []chat.Message) error` - Validates chat message slices
+    * Checks for nil/empty messages
+    * Validates all message roles against known values (system, user, assistant, tool)
+    * Allows empty content (valid for tool calls)
+    * Returns detailed error with message index for invalid entries
+  * `ValidationError` struct implementing error interface with:
+    * Field, Message, Err fields for context
+    * Error() method for formatted output
+    * Unwrap() method for error chain support
+  * Sentinel errors: ErrNilValue, ErrEmptyValue, ErrEmptyMessages, ErrInvalidRole, ErrEmptyContent
+* go/internal/validation/doc.go - Package documentation with:
+  * Overview of validation package purpose
+  * Usage examples for RequireNotNil, RequireNotEmpty, ValidateMessages
+  * Error handling examples with errors.Is and errors.As
+* go/internal/validation/validate_test.go - Comprehensive unit tests with:
+  * 31 test cases covering all acceptance criteria
+  * Tests for non-nil values: value, pointer, slice, map, interface
+  * Tests for nil values: interface, pointer, slice, map, typed nil interface, channel, func
+  * Tests for empty/non-empty strings
+  * Tests for valid/invalid messages with all role types
+  * Tests for ValidationError methods and error chain utilities
+  * Table-driven tests for all valid role types
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test ./internal/validation/... -v` - All 31 tests passed
+* `go test ./internal/validation/... -cover` - 100.0% statement coverage
+
+### Design Notes
+
+* Package placed in `internal/validation/` to restrict visibility to this module
+* Uses reflection for nil detection across pointer, interface, slice, map, channel, and func types
+* ValidationError provides structured errors with field names for better error messages
+* Sentinel errors enable error type checking with errors.Is()
+* Empty content allowed in messages to support tool call messages without text
+* Imports chat package for Message and Role types to validate against production types
+
+---
+
+## Review Fix: User Story 1.4.2 Documentation
+
+**Date**: 2026-02-02
+
+### Modified
+
+* go/internal/validation/validate.go - Documentation improvements:
+  * Updated `RequireNotEmpty` doc comment to accurately describe behavior (checks empty string only, does not trim whitespace)
+  * Added documentation for `ErrEmptyContent` sentinel explaining it is reserved for caller use in content validation scenarios
+
+### Validation Results
+
+* `go build ./internal/validation/...` - Passed
+* `go vet ./internal/validation/...` - Passed
+* `go test ./internal/validation/... -cover` - 100.0% statement coverage
