@@ -46,7 +46,7 @@ Detailed implementation plan for Epic 2 of the Go SDK port, covering LLM provide
   * Details: .copilot-tracking/details/2026-02-02-golang-epic2-providers-details.md (Lines 30-120)
 * [x] Step 2.1.2: Implement FunctionTool with reflection
   * Details: .copilot-tracking/details/2026-02-02-golang-epic2-providers-details.md (Lines 122-220)
-* [ ] Step 2.1.3: Implement hosted tool types
+* [x] Step 2.1.3: Implement hosted tool types
   * Details: .copilot-tracking/details/2026-02-02-golang-epic2-providers-details.md (Lines 222-320)
 * [ ] Step 2.1.4: Implement function invocation utilities
   * Details: .copilot-tracking/details/2026-02-02-golang-epic2-providers-details.md (Lines 322-400)

@@ -18,6 +18,8 @@ Implementation of Epic 2 for the Go SDK port, covering LLM provider implementati
 * go/tool/config.go - InvocationConfig struct controlling tool invocation behavior with defaults matching Python FunctionInvocationConfiguration, including fluent builder methods and Merge/Validate helpers
 * go/tool/schema.go - JSON Schema generation from Go struct types using reflection, supporting struct tags for descriptions, enums, required fields, and defaults; handles nested structs, slices, and maps
 * go/tool/function.go - FunctionTool implementation wrapping Go functions for AI model invocation with automatic signature validation, JSON Schema generation, and invocation counting; includes Func() decorator and FuncOption configuration pattern
+* go/tool/hosted.go - Hosted tool implementations for provider-hosted capabilities (HostedWebSearchTool, HostedCodeInterpreterTool, HostedFileSearchTool, HostedMCPTool, HostedImageGenerationTool) with configuration types, constructors, and ProviderConfig serialization aligned with Python HostedTool classes
+* go/tool/hosted_test.go - Comprehensive tests for hosted tool types covering interface compliance, ProviderConfig serialization, default names, and error handling (21 tests)
 
 ### Modified
 
