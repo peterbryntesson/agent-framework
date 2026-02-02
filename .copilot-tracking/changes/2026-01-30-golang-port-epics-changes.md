@@ -6,11 +6,12 @@
 
 ## Summary
 
-Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent Framework Go port:
+Implementation of User Stories 1.1.1, 1.1.2, 1.1.3, and 1.4.2 for the Microsoft Agent Framework Go port:
 
 * User Story 1.1.1: Initialize Go Module
 * User Story 1.1.2: Configure CI Pipeline
 * User Story 1.1.3: Create Project Documentation
+* User Story 1.4.2: Implement Validation Helpers
 
 ## Changes
 
@@ -576,3 +577,118 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * FinishReason and UpdateKind use int-based enums for efficiency and switch statement optimization
 * ResponseUpdate includes FinishReason for completion updates and Error for error updates
 * Usage is a pointer in Response to allow nil when provider doesn't report usage
+
+---
+
+## User Story 1.4.1: Implement JSON Utilities
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/internal/json/doc.go - Package documentation with:
+  * Overview of JSON marshaling/unmarshaling utilities
+  * Usage examples for MarshalToRawMessage and UnmarshalFromRawMessage
+  * Explanation of nil and empty value handling
+* go/internal/json/utils.go - JSON utility functions with:
+  * `ErrNilTarget` sentinel error for nil target validation
+  * `ErrNonPointerTarget` sentinel error for non-pointer target validation
+  * `MarshalToRawMessage(v interface{}) (json.RawMessage, error)` - marshals any value to json.RawMessage
+    * Returns nil for nil interface or nil pointer values
+    * Uses reflection to detect typed nil pointers
+  * `UnmarshalFromRawMessage(data json.RawMessage, target interface{}) error` - unmarshals json.RawMessage into target
+    * Returns nil for nil or empty data (no-op)
+    * Validates target is non-nil pointer before unmarshaling
+    * Returns appropriate sentinel errors for validation failures
+* go/internal/json/utils_test.go - Comprehensive unit tests with:
+  * 25 test cases covering all acceptance criteria
+  * Table-driven tests for primitive types
+  * Tests for nil/empty handling in both directions
+  * Round-trip tests for structs and complex nested structures
+  * Error condition tests (nil target, non-pointer, invalid JSON, type mismatch)
+  * Sentinel error message verification
+
+### Validation Results
+
+* `go build ./internal/json/...` - Passed
+* `go vet ./internal/json/...` - Passed
+* `go test ./internal/json/... -v` - All 25 tests passed
+* `go test ./internal/json/... -cover` - 100.0% statement coverage
+
+### Design Notes
+
+* Package placed in `internal/` directory to restrict visibility to this module only
+* Uses reflection sparingly - only for nil pointer detection in MarshalToRawMessage and pointer validation in UnmarshalFromRawMessage
+* Sentinel errors follow Go error conventions with lowercase messages
+* Empty data handling returns nil error (no-op) to simplify caller code when data may be absent
+
+---
+
+## User Story 1.4.2: Implement Validation Helpers
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/internal/validation/validate.go - Input validation functions with:
+  * `RequireNotNil(v interface{}, name string) error` - Validates value is not nil
+    * Handles nil interface, nil pointer, nil slice, nil map, nil channel, nil func
+    * Returns structured ValidationError with field name and wrapped sentinel error
+  * `RequireNotEmpty(s string, name string) error` - Validates string is not empty
+    * Returns structured ValidationError for empty strings
+  * `ValidateMessages(messages []chat.Message) error` - Validates chat message slices
+    * Checks for nil/empty messages
+    * Validates all message roles against known values (system, user, assistant, tool)
+    * Allows empty content (valid for tool calls)
+    * Returns detailed error with message index for invalid entries
+  * `ValidationError` struct implementing error interface with:
+    * Field, Message, Err fields for context
+    * Error() method for formatted output
+    * Unwrap() method for error chain support
+  * Sentinel errors: ErrNilValue, ErrEmptyValue, ErrEmptyMessages, ErrInvalidRole, ErrEmptyContent
+* go/internal/validation/doc.go - Package documentation with:
+  * Overview of validation package purpose
+  * Usage examples for RequireNotNil, RequireNotEmpty, ValidateMessages
+  * Error handling examples with errors.Is and errors.As
+* go/internal/validation/validate_test.go - Comprehensive unit tests with:
+  * 31 test cases covering all acceptance criteria
+  * Tests for non-nil values: value, pointer, slice, map, interface
+  * Tests for nil values: interface, pointer, slice, map, typed nil interface, channel, func
+  * Tests for empty/non-empty strings
+  * Tests for valid/invalid messages with all role types
+  * Tests for ValidationError methods and error chain utilities
+  * Table-driven tests for all valid role types
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test ./internal/validation/... -v` - All 31 tests passed
+* `go test ./internal/validation/... -cover` - 100.0% statement coverage
+
+### Design Notes
+
+* Package placed in `internal/validation/` to restrict visibility to this module
+* Uses reflection for nil detection across pointer, interface, slice, map, channel, and func types
+* ValidationError provides structured errors with field names for better error messages
+* Sentinel errors enable error type checking with errors.Is()
+* Empty content allowed in messages to support tool call messages without text
+* Imports chat package for Message and Role types to validate against production types
+
+---
+
+## Review Fix: User Story 1.4.2 Documentation
+
+**Date**: 2026-02-02
+
+### Modified
+
+* go/internal/validation/validate.go - Documentation improvements:
+  * Updated `RequireNotEmpty` doc comment to accurately describe behavior (checks empty string only, does not trim whitespace)
+  * Added documentation for `ErrEmptyContent` sentinel explaining it is reserved for caller use in content validation scenarios
+
+### Validation Results
+
+* `go build ./internal/validation/...` - Passed
+* `go vet ./internal/validation/...` - Passed
+* `go test ./internal/validation/... -cover` - 100.0% statement coverage
