@@ -1,0 +1,14 @@
+{
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "This is a very long response that was cut off because it reached the maximum token limit. The response includes a detailed analysis of the project structure and recommendations for improvement. It covers topics such as code organization, naming conventions, testing strategies, and deployment considerations. The analysis also touches on performance optimization techniques and security best practices. Furthermore, it discusses the importance of documentation and how it can be improved to better serve developers. The response continues with examples of..."
+    }
+  ],
+  "finish_reason": "length",
+  "usage": {
+    "input_tokens": 100,
+    "output_tokens": 1000,
+    "total_tokens": 1100
+  }
+}

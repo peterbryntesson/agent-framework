@@ -1,0 +1,17 @@
+{
+  "id": "session_active_67890",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful AI assistant."
+    },
+    {
+      "role": "user",
+      "content": "Hello, can you help me?"
+    },
+    {
+      "role": "assistant",
+      "content": "Of course! I'm here to help. What would you like assistance with?"
+    }
+  ]
+}

@@ -772,3 +772,92 @@ User Story 1.5.1 meets all acceptance criteria:
 | `MockAgent` implementing `Agent` interface with configurable function fields | ✅ Passed |
 | `MockChatClient` implementing `Client` interface with configurable function fields | ✅ Passed |
 | Table-driven test patterns established | ✅ Passed |
+
+---
+
+## User Story 1.5.2: Establish Test Fixtures
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/testdata/messages/ - Message fixture directory with:
+  * user_message.json - User message with text content
+  * system_message.json - System prompt message
+  * assistant_message.json - Assistant response message
+  * tool_message.json - Tool result message with JSON content
+  * assistant_with_tool_calls.json - Assistant message with tool call requests
+  * multi_content_message.json - Message with text and image content
+  * conversation.json - Multi-turn conversation array
+
+* go/testdata/responses/ - Response fixture directory with:
+  * simple_response.json - Basic response with usage
+  * response_with_metadata.json - Response with model metadata
+  * tool_call_response.json - Response with tool_calls finish reason
+  * truncated_response.json - Response with length finish reason
+  * async_run_in_progress.json - Async run in progress status
+  * async_run_completed.json - Async run completed status
+  * async_run_failed.json - Async run with error details
+
+* go/testdata/sessions/ - Session fixture directory with:
+  * empty_session.json - New session with no messages
+  * session_with_history.json - Session with basic conversation
+  * multi_turn_session.json - Extended multi-turn technical conversation
+  * session_with_tool_calls.json - Session with tool call history
+
+* go/testutil/doc.go - Package documentation with:
+  * Overview of fixture loading utilities
+  * Usage examples for LoadFixture and LoadFixtureAs
+  * Fixture category descriptions
+  * Test helper function documentation
+
+* go/testutil/fixtures.go - Fixture loading functions with:
+  * `ErrFixtureNotFound` sentinel error for missing files
+  * `ErrInvalidFixture` sentinel error for parse failures
+  * `TestDataDir()` - Returns absolute path to testdata directory using runtime.Caller
+  * `LoadFixture(path)` - Reads fixture file bytes with proper error handling
+  * `LoadFixtureAs(path, target)` - Reads and unmarshals fixture into target struct
+  * `MustLoadFixture(path)` - Panics on failure for test initialization
+  * `MustLoadFixtureAs(path, target)` - Panics on failure for test initialization
+  * `JSONEqual(a, b)` - Compares JSON semantic equality ignoring whitespace/order
+  * `FixtureExists(path)` - Checks if fixture file exists
+  * `ListFixtures(dir)` - Lists all fixture files in a subdirectory
+
+* go/testutil/fixtures_test.go - Comprehensive tests with 31 test cases:
+  * TestDataDir path and subdirectory verification
+  * LoadFixture for all message, response, and session fixtures
+  * LoadFixtureAs with valid and invalid targets
+  * MustLoadFixture and MustLoadFixtureAs panic behavior
+  * JSONEqual with identical, whitespace, key order, and value differences
+  * FixtureExists for existing and non-existing files
+  * ListFixtures for all subdirectories
+  * Sentinel error distinctness and message verification
+
+* go/Makefile - Development command automation with:
+  * build, test, test-verbose, test-race targets
+  * coverage and coverage-html targets for local coverage analysis
+  * lint, vet, fmt targets for code quality
+  * clean target for generated files
+  * help target with usage documentation
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go fmt ./testutil/...` - Applied formatting
+* `go test ./testutil/... -v` - All 31 tests passed
+* `go test ./... -cover` - All packages passed:
+  * agent: 89.7% statement coverage
+  * chat: 100.0% statement coverage
+  * internal/json: 100.0% statement coverage
+  * internal/validation: 100.0% statement coverage
+  * observability: 100.0% statement coverage
+  * testutil: 87.8% statement coverage
+
+### Design Notes
+
+* Test fixtures use snake_case JSON keys matching common API conventions
+* `TestDataDir()` uses `runtime.Caller` to reliably locate fixtures regardless of working directory
+* Fixture loading functions return sentinel errors for type-safe error checking with `errors.Is`
+* `MustLoad*` variants support test initialization where fixture loading must succeed
+* Makefile provides POSIX-style targets for cross-platform development automation
