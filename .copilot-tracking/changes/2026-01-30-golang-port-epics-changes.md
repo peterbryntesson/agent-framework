@@ -529,3 +529,50 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * `Message.Text()` method concatenates all TextContent items, ignoring other content types (images, tool calls)
 * JSON tags on content structs use snake_case to match common API conventions
 * ToolCall is a separate struct from ToolCallContent to allow reuse in Message.ToolCalls field
+
+---
+
+## User Story 1.3.3: Implement Response Types
+
+**Date**: 2026-02-02
+
+### Added
+
+(none - types already exist in response.go)
+
+### Verified
+
+* go/chat/response.go - Chat response types already implemented with:
+  * `Response` struct with Message, FinishReason, Usage (pointer to UsageDetails), RawRepresentation fields
+  * `Text()` convenience method on Response delegating to Message.Text()
+  * `ResponseUpdate` struct for streaming with Kind, Delta, Message, Usage, FinishReason, Error, Metadata fields
+  * `UpdateKind` type (int-based enum) with constants:
+    * `UpdateKindContentDelta` - incremental content available
+    * `UpdateKindToolCall` - tool call is being made
+    * `UpdateKindToolResult` - tool result is available
+    * `UpdateKindMessageComplete` - complete message is available
+    * `UpdateKindUsage` - token usage information available
+    * `UpdateKindError` - error occurred
+    * `UpdateKindDone` - stream is complete
+  * `ContentDelta` struct with Role, TextDelta, ToolCallID, Name, ArgsDelta fields
+  * `FinishReason` type (int-based enum) with constants:
+    * `FinishReasonStop` - normal completion
+    * `FinishReasonLength` - maximum token limit reached
+    * `FinishReasonToolCalls` - waiting for tool results
+    * `FinishReasonContentFilter` - content filtered by safety systems
+* go/chat/usage.go - UsageDetails struct already implemented with:
+  * InputTokens, OutputTokens, TotalTokens fields
+  * CachedTokens, ReasoningTokens optional fields
+
+### Validation Results
+
+* `go build ./chat/...` - Passed
+* `go test ./chat/... -v` - All 53 tests passed
+* `go test ./chat/... -cover` - 100.0% statement coverage
+
+### Design Notes
+
+* Response types in chat package parallel agent/response.go types but are tailored for chat client abstraction
+* FinishReason and UpdateKind use int-based enums for efficiency and switch statement optimization
+* ResponseUpdate includes FinishReason for completion updates and Error for error updates
+* Usage is a pointer in Response to allow nil when provider doesn't report usage
