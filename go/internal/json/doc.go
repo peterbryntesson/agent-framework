@@ -15,7 +15,7 @@ Use MarshalToRawMessage to convert Go values to json.RawMessage:
 	}
 
 	cfg := Config{Name: "example"}
-	raw, err := jsonutil.MarshalToRawMessage(cfg)
+	raw, err := json.MarshalToRawMessage(cfg)
 	if err != nil {
 		return err
 	}
@@ -23,7 +23,7 @@ Use MarshalToRawMessage to convert Go values to json.RawMessage:
 Use UnmarshalFromRawMessage to decode json.RawMessage into Go values:
 
 	var result Config
-	err := jsonutil.UnmarshalFromRawMessage(raw, &result)
+	err := json.UnmarshalFromRawMessage(raw, &result)
 	if err != nil {
 		return err
 	}
