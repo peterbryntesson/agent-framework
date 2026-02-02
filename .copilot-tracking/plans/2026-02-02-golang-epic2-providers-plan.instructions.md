@@ -37,7 +37,7 @@ Detailed implementation plan for Epic 2 of the Go SDK port, covering LLM provide
 
 ## Implementation Checklist
 
-### [ ] Feature 2.1: Tool System Package
+### [x] Feature 2.1: Tool System Package
 
 <!-- parallelizable: false -->
 <!-- Priority: Implement first as providers depend on tool types -->
@@ -50,9 +50,9 @@ Detailed implementation plan for Epic 2 of the Go SDK port, covering LLM provide
   * Details: .copilot-tracking/details/2026-02-02-golang-epic2-providers-details.md (Lines 222-320)
 * [x] Step 2.1.4: Implement function invocation utilities
   * Details: .copilot-tracking/details/2026-02-02-golang-epic2-providers-details.md (Lines 322-400)
-* [ ] Step 2.1.5: Add tool package tests
+* [x] Step 2.1.5: Add tool package tests
   * Details: .copilot-tracking/details/2026-02-02-golang-epic2-providers-details.md (Lines 402-450)
-* [ ] Validate Feature 2.1
+* [x] Validate Feature 2.1
   * Run `go test ./tool/...` with 90%+ coverage
 
 ### [ ] Feature 2.2: OpenAI Provider Package

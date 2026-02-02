@@ -23,6 +23,12 @@ Implementation of Epic 2 for the Go SDK port, covering LLM provider implementati
 * go/tool/errors.go - Tool-specific error types including sentinel errors (ErrUnknownTool, ErrInvalidArguments, ErrMaxIterations, ErrConsecutiveErrors, ErrInvocationDisabled, ErrToolTimeout) and structured error types (InvocationError, InvocationPanicError, UnknownToolError, ArgumentError) with proper error wrapping and Is/Unwrap support
 * go/tool/invoke.go - Invoker struct for safe tool invocation with panic recovery, timeout support, batch processing (sequential and parallel), context cancellation handling, tool management methods, and InvocationResult type for batch results
 * go/tool/invoke_test.go - Comprehensive tests for Invoker covering creation, invocation, unknown tool handling, panic recovery, batch processing, tool management, context cancellation, and InvocationResult helpers (26 tests)
+* go/tool/tool_test.go - Comprehensive tests for core Tool and HostedTool interfaces, type constants (ToolChoice, ApprovalMode, ToolType), ToolCall/ToolResult serialization, and AdditionalProperties (14 tests)
+* go/tool/function_test.go - Comprehensive tests for FunctionTool creation, invocation, signature validation, max invocations limit, Func() decorator, MustFunc(), and option functions (32 tests)
+* go/tool/schema_test.go - Comprehensive tests for JSON Schema generation covering basic types, numeric types, enum support, default values, nested structs, slices, maps, required fields, field visibility, pointer types, and unsupported types (23 tests)
+* go/tool/config_test.go - Comprehensive tests for InvocationConfig including defaults, builder methods (With*), Merge, and Validate functions (15 tests)
+* go/tool/result_test.go - Comprehensive tests for Result struct including constructors, String(), JSON serialization, WithMetadata, and GetMetadata (16 tests)
+* go/tool/errors_test.go - Comprehensive tests for error types including sentinel errors, InvocationError, InvocationPanicError, UnknownToolError, and ArgumentError with proper error wrapping support (12 tests)
 
 ### Modified
 
