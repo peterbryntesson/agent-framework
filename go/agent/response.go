@@ -30,6 +30,15 @@ type Response struct {
 	// ContinuationToken for resuming long-running operations.
 	ContinuationToken string
 
+	// ResponseID is the unique identifier for this response.
+	ResponseID string
+
+	// AgentID is the identifier of the agent that generated this response.
+	AgentID string
+
+	// CreatedAt is the timestamp when this response was created.
+	CreatedAt time.Time
+
 	// FinishReason indicates why generation stopped.
 	FinishReason FinishReason
 }
@@ -41,10 +50,53 @@ func (r *Response) Text() string {
 		return ""
 	}
 	var text string
-	for _, msg := range r.Messages {
-		text += msg.Content
+	for i := range r.Messages {
+		text += r.Messages[i].Text()
 	}
 	return text
+}
+
+// ToResponseUpdates converts this Response to a slice of ResponseUpdate for streaming compatibility.
+// This enables non-streaming responses to be processed by streaming-compatible handlers.
+// Each message in the response is converted to a MessageComplete update, followed by a Done update.
+func (r *Response) ToResponseUpdates() []ResponseUpdate {
+	if r == nil {
+		return nil
+	}
+
+	updates := make([]ResponseUpdate, 0, len(r.Messages)+2)
+
+	// Add a usage update if usage is available
+	if r.Usage != nil {
+		updates = append(updates, ResponseUpdate{
+			Kind:       UpdateKindUsage,
+			Usage:      r.Usage,
+			ResponseID: r.ResponseID,
+			CreatedAt:  r.CreatedAt,
+		})
+	}
+
+	// Add MessageComplete updates for each message
+	for i := range r.Messages {
+		msg := &r.Messages[i]
+		updates = append(updates, ResponseUpdate{
+			Kind:       UpdateKindMessageComplete,
+			Message:    msg,
+			ResponseID: r.ResponseID,
+			Role:       string(msg.Role),
+			CreatedAt:  r.CreatedAt,
+		})
+	}
+
+	// Add the final Done update
+	updates = append(updates, ResponseUpdate{
+		Kind:         UpdateKindDone,
+		FinishReason: r.FinishReason,
+		ResponseID:   r.ResponseID,
+		CreatedAt:    r.CreatedAt,
+	})
+
+	return updates
 }
 
 // ResponseUpdate represents an incremental update during streaming.
@@ -69,6 +121,21 @@ type ResponseUpdate struct {
 
 	// FinishReason for completion updates.
 	FinishReason FinishReason
+
+	// Role indicates the role of the author (system, user, assistant, tool).
+	Role string
+
+	// AuthorName is an optional name for the message author.
+	AuthorName string
+
+	// ResponseID is the ID of the response of which this update is a part.
+	ResponseID string
+
+	// MessageID is the ID of the message of which this update is a part.
+	MessageID string
+
+	// CreatedAt is the timestamp when this update was created.
+	CreatedAt time.Time
 }
 
 // UpdateKind represents the type of streaming update.

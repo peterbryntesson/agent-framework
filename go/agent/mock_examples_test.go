@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/microsoft/agent-framework-go/agent"
+	"github.com/microsoft/agent-framework-go/chat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -71,7 +72,7 @@ func TestMockAgent_Run(t *testing.T) {
 	testError := errors.New("test error")
 	testResponse := &agent.Response{
 		Messages: []agent.Message{
-			{Role: "assistant", Content: "Hello, world!"},
+			chat.NewAssistantMessage("Hello, world!"),
 		},
 		FinishReason: agent.FinishReasonStop,
 	}
@@ -89,7 +90,7 @@ func TestMockAgent_Run(t *testing.T) {
 			setupMock: func() *MockAgent {
 				return NewMockAgent()
 			},
-			messages: []agent.Message{{Role: "user", Content: "Hello"}},
+			messages: []agent.Message{chat.NewUserMessage("Hello")},
 			wantResp: nil,
 			wantErr:  nil,
 		},
@@ -98,7 +99,7 @@ func TestMockAgent_Run(t *testing.T) {
 			setupMock: func() *MockAgent {
 				return NewMockAgent().WithResponse(testResponse, nil)
 			},
-			messages: []agent.Message{{Role: "user", Content: "Hello"}},
+			messages: []agent.Message{chat.NewUserMessage("Hello")},
 			wantResp: testResponse,
 			wantErr:  nil,
 		},
@@ -107,7 +108,7 @@ func TestMockAgent_Run(t *testing.T) {
 			setupMock: func() *MockAgent {
 				return NewMockAgent().WithResponse(nil, testError)
 			},
-			messages:   []agent.Message{{Role: "user", Content: "Hello"}},
+			messages:   []agent.Message{chat.NewUserMessage("Hello")},
 			wantResp:   nil,
 			wantErr:    testError,
 			wantErrMsg: "test error",
@@ -119,16 +120,16 @@ func TestMockAgent_Run(t *testing.T) {
 				m.RunFunc = func(_ context.Context, messages []agent.Message, _ ...agent.RunOption) (*agent.Response, error) {
 					return &agent.Response{
 						Messages: []agent.Message{
-							{Role: "assistant", Content: "Received: " + messages[0].Content},
+							chat.NewAssistantMessage("Received: " + messages[0].Text()),
 						},
 					}, nil
 				}
 				return m
 			},
-			messages: []agent.Message{{Role: "user", Content: "Test input"}},
+			messages: []agent.Message{chat.NewUserMessage("Test input")},
 			wantResp: &agent.Response{
 				Messages: []agent.Message{
-					{Role: "assistant", Content: "Received: Test input"},
+					chat.NewAssistantMessage("Received: Test input"),
 				},
 			},
 			wantErr: nil,
@@ -153,7 +154,7 @@ func TestMockAgent_Run(t *testing.T) {
 				require.NotNil(t, resp)
 				assert.Equal(t, len(tt.wantResp.Messages), len(resp.Messages))
 				for i, msg := range tt.wantResp.Messages {
-					assert.Equal(t, msg.Content, resp.Messages[i].Content)
+					assert.Equal(t, msg.Text(), resp.Messages[i].Text())
 				}
 			} else {
 				assert.Nil(t, resp)
@@ -211,7 +212,7 @@ func TestMockAgent_RunStream(t *testing.T) {
 			mock := tt.setupMock()
 			ctx := context.Background()
 
-			ch, err := mock.RunStream(ctx, []agent.Message{{Role: "user", Content: "Hello"}})
+			ch, err := mock.RunStream(ctx, []agent.Message{chat.NewUserMessage("Hello")})
 
 			if tt.wantErr != nil {
 				require.Error(t, err)
