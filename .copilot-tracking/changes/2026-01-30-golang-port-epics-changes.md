@@ -379,3 +379,73 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * `go vet ./...` - Passed
 * `go test -v ./agent/... -run "Error|Sentinel|Retryable"` - All 21 tests passed
 * `go test -cover ./...` - 89.7% statement coverage (agent package, up from 86.7%)
+
+---
+
+## User Story 1.3.1: Define ChatClient Interface
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/chat/client.go - Chat client interface with:
+  * `Client` interface with GetResponse, GetStreamingResponse, Metadata methods
+  * `GetResponse(ctx, messages, options) (*Response, error)` signature for synchronous completions
+  * `GetStreamingResponse(ctx, messages, options) (<-chan ResponseUpdate, error)` signature for streaming
+  * `ClientMetadata` struct with ProviderName, ModelID, EndpointURI fields
+  * `Options` struct with MaxTokens, Temperature, TopP, StopSequences, ResponseFormat, Metadata
+  * `NewOptions()` constructor for creating Options with initialized Metadata map
+* go/chat/message.go - Message types with:
+  * `Role` type (string-based) with constants: RoleSystem, RoleUser, RoleAssistant, RoleTool
+  * `Message` struct with Role, Content, Name, ToolCallID, CreatedAt, RawRepresentation
+  * `NewUserMessage(content)`, `NewSystemMessage(content)`, `NewAssistantMessage(content)` constructors
+* go/chat/response.go - Response types with:
+  * `Response` struct with Message, FinishReason, Usage, RawRepresentation
+  * `Text()` convenience method on Response
+  * `ResponseUpdate` struct with Kind, Delta, Message, Usage, FinishReason, Error, Metadata
+  * `UpdateKind` constants: ContentDelta, ToolCall, ToolResult, MessageComplete, Usage, Error, Done
+  * `ContentDelta` struct with Role, TextDelta, ToolCallID, Name, ArgsDelta
+  * `FinishReason` constants: Stop, Length, ToolCalls, ContentFilter
+* go/chat/usage.go - Usage tracking with:
+  * `UsageDetails` struct with InputTokens, OutputTokens, TotalTokens, CachedTokens, ReasoningTokens
+* go/chat/doc.go - Package documentation with:
+  * Overview of Client interface
+  * Usage examples for GetResponse and GetStreamingResponse
+  * Options configuration examples
+  * Provider metadata access examples
+  * Message creation examples
+  * Links to provider subpackages
+* go/chat/client_test.go - Comprehensive unit tests with:
+  * `mockClient` test implementation of Client interface
+  * `TestClientMetadata_Fields` - verifies metadata struct fields
+  * `TestClientInterface_GetResponse` - verifies synchronous response handling
+  * `TestClientInterface_GetStreamingResponse` - verifies streaming response handling
+  * `TestClientInterface_Metadata` - verifies metadata retrieval
+  * `TestOptions_NewOptions` - verifies Options constructor
+  * `TestOptions_Fields` - verifies all Options fields
+  * `TestResponseText_NilResponse` - verifies nil safety
+  * `TestResponseText_EmptyContent` - verifies empty content handling
+  * `TestResponseText_WithContent` - verifies text extraction
+  * `TestResponse_AllFields` - verifies all Response fields
+  * `TestUpdateKind_Constants` - verifies UpdateKind enum values
+  * `TestFinishReason_Constants` - verifies FinishReason enum values
+  * `TestRole_Constants` - verifies Role string values
+  * `TestNewUserMessage` - verifies user message constructor
+  * `TestNewSystemMessage` - verifies system message constructor
+  * `TestNewAssistantMessage` - verifies assistant message constructor
+  * `TestMessage_AllFields` - verifies all Message fields
+  * `TestUsageDetails_AllFields` - verifies all UsageDetails fields
+  * `TestContentDelta_AllFields` - verifies all ContentDelta fields
+  * `TestResponseUpdate_AllFields` - verifies all ResponseUpdate fields
+
+### Modified
+
+(none)
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go fmt ./chat/...` - Applied formatting
+* `go test -v ./chat/...` - All 20 tests passed
+* golangci-lint - Not installed locally (CI will validate)
