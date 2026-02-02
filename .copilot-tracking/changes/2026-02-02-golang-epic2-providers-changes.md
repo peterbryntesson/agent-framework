@@ -16,6 +16,8 @@ Implementation of Epic 2 for the Go SDK port, covering LLM provider implementati
 * go/tool/tool.go - Core Tool and HostedTool interfaces with supporting types (ToolChoice, ApprovalMode, ToolType, ToolCall, ToolResult) aligned with .NET AITool and Python ToolProtocol
 * go/tool/result.go - Result struct for tool invocation outputs with constructors for success, error, and value-based results, plus JSON serialization support
 * go/tool/config.go - InvocationConfig struct controlling tool invocation behavior with defaults matching Python FunctionInvocationConfiguration, including fluent builder methods and Merge/Validate helpers
+* go/tool/schema.go - JSON Schema generation from Go struct types using reflection, supporting struct tags for descriptions, enums, required fields, and defaults; handles nested structs, slices, and maps
+* go/tool/function.go - FunctionTool implementation wrapping Go functions for AI model invocation with automatic signature validation, JSON Schema generation, and invocation counting; includes Func() decorator and FuncOption configuration pattern
 
 ### Modified
 
