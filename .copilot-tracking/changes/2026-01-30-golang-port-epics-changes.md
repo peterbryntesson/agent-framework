@@ -576,3 +576,47 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * FinishReason and UpdateKind use int-based enums for efficiency and switch statement optimization
 * ResponseUpdate includes FinishReason for completion updates and Error for error updates
 * Usage is a pointer in Response to allow nil when provider doesn't report usage
+
+---
+
+## User Story 1.4.1: Implement JSON Utilities
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/internal/json/doc.go - Package documentation with:
+  * Overview of JSON marshaling/unmarshaling utilities
+  * Usage examples for MarshalToRawMessage and UnmarshalFromRawMessage
+  * Explanation of nil and empty value handling
+* go/internal/json/utils.go - JSON utility functions with:
+  * `ErrNilTarget` sentinel error for nil target validation
+  * `ErrNonPointerTarget` sentinel error for non-pointer target validation
+  * `MarshalToRawMessage(v interface{}) (json.RawMessage, error)` - marshals any value to json.RawMessage
+    * Returns nil for nil interface or nil pointer values
+    * Uses reflection to detect typed nil pointers
+  * `UnmarshalFromRawMessage(data json.RawMessage, target interface{}) error` - unmarshals json.RawMessage into target
+    * Returns nil for nil or empty data (no-op)
+    * Validates target is non-nil pointer before unmarshaling
+    * Returns appropriate sentinel errors for validation failures
+* go/internal/json/utils_test.go - Comprehensive unit tests with:
+  * 25 test cases covering all acceptance criteria
+  * Table-driven tests for primitive types
+  * Tests for nil/empty handling in both directions
+  * Round-trip tests for structs and complex nested structures
+  * Error condition tests (nil target, non-pointer, invalid JSON, type mismatch)
+  * Sentinel error message verification
+
+### Validation Results
+
+* `go build ./internal/json/...` - Passed
+* `go vet ./internal/json/...` - Passed
+* `go test ./internal/json/... -v` - All 25 tests passed
+* `go test ./internal/json/... -cover` - 100.0% statement coverage
+
+### Design Notes
+
+* Package placed in `internal/` directory to restrict visibility to this module only
+* Uses reflection sparingly - only for nil pointer detection in MarshalToRawMessage and pointer validation in UnmarshalFromRawMessage
+* Sentinel errors follow Go error conventions with lowercase messages
+* Empty data handling returns nil error (no-op) to simplify caller code when data may be absent
