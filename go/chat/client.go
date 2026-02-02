@@ -50,7 +50,6 @@ type ClientMetadata struct {
 
 // Options configures a chat completion request.
 // All fields are optional; zero values indicate the model's defaults should be used.
-// This type will be expanded in subsequent user stories to include tools and other options.
 type Options struct {
 	// MaxTokens limits the maximum number of tokens in the response.
 	// Zero means use the model's default limit.
@@ -75,6 +74,59 @@ type Options struct {
 	// Metadata contains additional provider-specific options.
 	// This allows extensibility without modifying the Options struct.
 	Metadata map[string]interface{}
+
+	// Seed is used for reproducible outputs.
+	// If specified, the model will attempt to produce deterministic results.
+	Seed *int
+
+	// LogitBias modifies the likelihood of specified tokens appearing in the output.
+	// Map from token ID (string or int) to bias value (-100 to 100).
+	LogitBias map[string]float32
+
+	// FrequencyPenalty penalizes tokens based on their frequency in the response so far.
+	// Values range from -2.0 to 2.0.
+	FrequencyPenalty float32
+
+	// PresencePenalty penalizes tokens based on whether they appear in the response so far.
+	// Values range from -2.0 to 2.0.
+	PresencePenalty float32
+
+	// Tools are the tools/functions available for the model to call.
+	Tools []ToolDefinition
+
+	// ToolChoice specifies how the model should use tools.
+	// Values: "auto" (model decides), "none" (no tools), "required" (must use a tool),
+	// or a specific tool name to force calling that tool.
+	ToolChoice string
+
+	// Instructions provides a system prompt or additional instructions for the request.
+	// This is merged with any system messages in the conversation.
+	Instructions string
+
+	// ModelID overrides the model to use for this request.
+	// If empty, the client's default model is used.
+	ModelID string
+
+	// User is an identifier for the end-user, used for abuse monitoring.
+	User string
+
+	// Store indicates whether to store the conversation for later retrieval.
+	Store bool
+
+	// ConversationID links this request to an existing conversation for persistence.
+	ConversationID string
+}
+
+// ToolDefinition describes a tool that the model can call.
+type ToolDefinition struct {
+	// Name is the name of the tool/function.
+	Name string `json:"name"`
+
+	// Description explains what the tool does.
+	Description string `json:"description,omitempty"`
+
+	// Parameters is the JSON Schema describing the tool's parameters.
+	Parameters map[string]interface{} `json:"parameters,omitempty"`
 }
 
 // NewOptions creates a new Options with default values.

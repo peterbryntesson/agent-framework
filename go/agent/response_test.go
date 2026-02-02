@@ -7,6 +7,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/microsoft/agent-framework-go/chat"
 )
 
 func TestResponseText_EmptyMessages(t *testing.T) {
@@ -34,7 +36,7 @@ func TestResponseText_NilResponse(t *testing.T) {
 func TestResponseText_SingleMessage(t *testing.T) {
 	response := &Response{
 		Messages: []Message{
-			{Content: "Hello, world!"},
+			chat.NewAssistantMessage("Hello, world!"),
 		},
 	}
 
@@ -49,8 +51,8 @@ func TestResponseText_SingleMessage(t *testing.T) {
 func TestResponseText_MultipleMessages(t *testing.T) {
 	response := &Response{
 		Messages: []Message{
-			{Content: "Hello, "},
-			{Content: "world!"},
+			chat.NewAssistantMessage("Hello, "),
+			chat.NewAssistantMessage("world!"),
 		},
 	}
 
@@ -76,7 +78,7 @@ func TestResponseFields(t *testing.T) {
 		Metadata:             metadata,
 		Usage:                usage,
 		SessionState:         sessionState,
-		Messages:             []Message{{Content: "test"}},
+		Messages:             []Message{chat.NewAssistantMessage("test")},
 		FinishReason:         FinishReasonStop,
 		ContinuationToken:    "token123",
 		AdditionalProperties: additionalProps,
@@ -104,7 +106,7 @@ func TestResponseFields(t *testing.T) {
 	if string(response.SessionState) != `{"key": "value"}` {
 		t.Errorf("Expected SessionState to match, got %s", string(response.SessionState))
 	}
-	if len(response.Messages) != 1 || response.Messages[0].Content != "test" {
+	if len(response.Messages) != 1 || response.Messages[0].Text() != "test" {
 		t.Errorf("Expected one message with content 'test', got %v", response.Messages)
 	}
 }
@@ -261,7 +263,7 @@ func TestResponseUpdate_AllFields(t *testing.T) {
 		Role:      "assistant",
 		TextDelta: "Hello",
 	}
-	msg := &Message{Content: "Complete message"}
+	msg := chat.NewAssistantMessage("Complete message")
 	usage := &UsageDetails{TotalTokens: 100}
 	metadata := map[string]interface{}{"key": "value"}
 	testErr := errors.New("test error")
@@ -269,7 +271,7 @@ func TestResponseUpdate_AllFields(t *testing.T) {
 	update := &ResponseUpdate{
 		Kind:         UpdateKindContentDelta,
 		Delta:        delta,
-		Message:      msg,
+		Message:      &msg,
 		Usage:        usage,
 		FinishReason: FinishReasonStop,
 		Error:        testErr,
@@ -282,8 +284,8 @@ func TestResponseUpdate_AllFields(t *testing.T) {
 	if update.Delta.TextDelta != "Hello" {
 		t.Errorf("Expected Delta.TextDelta 'Hello', got %q", update.Delta.TextDelta)
 	}
-	if update.Message.Content != "Complete message" {
-		t.Errorf("Expected Message.Content 'Complete message', got %q", update.Message.Content)
+	if update.Message.Text() != "Complete message" {
+		t.Errorf("Expected Message.Text() 'Complete message', got %q", update.Message.Text())
 	}
 	if update.Usage.TotalTokens != 100 {
 		t.Errorf("Expected Usage.TotalTokens 100, got %d", update.Usage.TotalTokens)
