@@ -25,7 +25,7 @@ func (r *Response) Text() string {
 	if r == nil {
 		return ""
 	}
-	return r.Message.Content
+	return r.Message.Text()
 }
 
 // ResponseUpdate represents an incremental update during streaming.

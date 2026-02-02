@@ -449,3 +449,83 @@ Implementation of User Stories 1.1.1, 1.1.2, and 1.1.3 for the Microsoft Agent F
 * `go fmt ./chat/...` - Applied formatting
 * `go test -v ./chat/...` - All 20 tests passed
 * golangci-lint - Not installed locally (CI will validate)
+
+---
+
+## User Story 1.3.2: Implement Message Types
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/chat/content.go - Content interface and type implementations with:
+  * `ContentType` string type with constants: ContentTypeText, ContentTypeImage, ContentTypeToolCall, ContentTypeToolResult
+  * `Content` interface with Type() method and sealed marker pattern using unexported `sealed()` method
+  * `contentBase` unexported struct for interface sealing
+  * `TextContent` struct with Text field and JSON tags
+  * `NewTextContent(text)` constructor
+  * `ImageContent` struct with URL, Base64Data, MediaType, Detail fields
+  * `NewImageContentFromURL(url)` and `NewImageContentFromBase64(data, mediaType)` constructors
+  * `ToolCall` struct with ID, Name, Arguments (json.RawMessage) fields
+  * `ToolCallContent` struct wrapping ToolCall with JSON tags
+  * `NewToolCallContent(id, name, arguments)` constructor
+  * `ToolResultContent` struct with ToolCallID, Content, IsError fields
+  * `NewToolResultContent(toolCallID, content)` and `NewToolResultContentWithError(toolCallID, errorMessage)` constructors
+* go/chat/content_test.go - Comprehensive unit tests with 33 test cases:
+  * ContentType constant tests
+  * TextContent type, fields, and constructor tests
+  * ImageContent type, fields, URL and Base64 constructor tests
+  * ToolCallContent type, ToolCall fields, and constructor tests
+  * ToolResultContent type, fields, and both constructor tests
+  * Content interface implementation verification
+  * ContentType distinctness verification
+  * Message.Text() method tests for nil, empty, single, multiple, mixed, and no-text content scenarios
+  * NewToolMessage constructor test
+  * NewAssistantMessageWithToolCalls constructor test
+  * NewMessageWithContents constructor test
+  * Message.ToolCalls field test
+  * JSON serialization tests for all content types
+
+### Modified
+
+* go/chat/message.go - Updated Message struct and constructors:
+  * Replaced `Content string` field with `Contents []Content` slice for structured content
+  * Added `ToolCalls []ToolCall` field for assistant tool call requests
+  * Added `Text()` method on Message to concatenate all TextContent items
+  * Updated `NewUserMessage(text)` to create single TextContent item
+  * Updated `NewSystemMessage(text)` to create single TextContent item
+  * Updated `NewAssistantMessage(text)` to create single TextContent item
+  * Added `NewToolMessage(toolCallID, content)` constructor for tool result messages
+  * Added `NewAssistantMessageWithToolCalls(toolCalls)` constructor for tool call messages
+  * Added `NewMessageWithContents(role, contents...)` constructor for multi-content messages
+  * Added `strings` package import for Text() method
+* go/chat/response.go - Updated Response.Text() method:
+  * Changed to call Message.Text() instead of accessing deprecated Message.Content field
+* go/chat/client_test.go - Updated existing tests for new Content types:
+  * Updated mockClient.GetResponse to use Contents slice
+  * Updated TestClientInterface_GetResponse to use Text() method
+  * Updated TestResponseText_EmptyContent to use empty Contents slice
+  * Updated TestResponseText_WithContent to use NewTextContent
+  * Updated TestResponse_AllFields to use Contents slice
+  * Updated TestNewUserMessage to verify Contents and Text()
+  * Updated TestNewSystemMessage to verify Contents and Text()
+  * Updated TestNewAssistantMessage to verify Contents and Text()
+  * Updated TestMessage_AllFields to use Contents and Text()
+  * Updated TestResponseUpdate_AllFields to use Contents and Text()
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./chat/...` - Passed
+* `go fmt ./chat/...` - Applied formatting to content.go and content_test.go
+* `go test ./chat/... -v` - All 53 tests passed
+* `go test ./chat/... -cover` - 100.0% statement coverage
+* `go test ./... -cover` - All packages passed (agent: 89.7%, chat: 100.0%, observability: 100.0%)
+
+### Design Notes
+
+* The Content interface uses Go's sealed interface pattern with an unexported `sealed()` method to prevent external implementations
+* The `contentBase` unexported struct provides the sealed marker implementation for all content types
+* `Message.Text()` method concatenates all TextContent items, ignoring other content types (images, tool calls)
+* JSON tags on content structs use snake_case to match common API conventions
+* ToolCall is a separate struct from ToolCallContent to allow reuse in Message.ToolCalls field

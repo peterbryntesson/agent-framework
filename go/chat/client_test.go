@@ -21,8 +21,8 @@ func (m *mockClient) GetResponse(ctx context.Context, messages []Message, option
 	}
 	return &Response{
 		Message: Message{
-			Role:    RoleAssistant,
-			Content: "Hello!",
+			Role:     RoleAssistant,
+			Contents: []Content{NewTextContent("Hello!")},
 		},
 		FinishReason: FinishReasonStop,
 	}, nil
@@ -72,8 +72,8 @@ func TestClientInterface_GetResponse(t *testing.T) {
 		getResponseFunc: func(_ context.Context, messages []Message, _ *Options) (*Response, error) {
 			return &Response{
 				Message: Message{
-					Role:    RoleAssistant,
-					Content: "Response to: " + messages[0].Content,
+					Role:     RoleAssistant,
+					Contents: []Content{NewTextContent("Response to: " + messages[0].Text())},
 				},
 				FinishReason: FinishReasonStop,
 			}, nil
@@ -224,7 +224,7 @@ func TestResponseText_NilResponse(t *testing.T) {
 func TestResponseText_EmptyContent(t *testing.T) {
 	// Arrange
 	response := &Response{
-		Message: Message{Role: RoleAssistant, Content: ""},
+		Message: Message{Role: RoleAssistant, Contents: []Content{}},
 	}
 
 	// Act
@@ -239,7 +239,7 @@ func TestResponseText_EmptyContent(t *testing.T) {
 func TestResponseText_WithContent(t *testing.T) {
 	// Arrange
 	response := &Response{
-		Message: Message{Role: RoleAssistant, Content: "Hello, world!"},
+		Message: Message{Role: RoleAssistant, Contents: []Content{NewTextContent("Hello, world!")}},
 	}
 
 	// Act
@@ -256,8 +256,8 @@ func TestResponse_AllFields(t *testing.T) {
 	raw := map[string]interface{}{"id": "chatcmpl-123"}
 	response := &Response{
 		Message: Message{
-			Role:    RoleAssistant,
-			Content: "Test response",
+			Role:     RoleAssistant,
+			Contents: []Content{NewTextContent("Test response")},
 		},
 		FinishReason: FinishReasonStop,
 		Usage: &UsageDetails{
@@ -350,8 +350,11 @@ func TestNewUserMessage(t *testing.T) {
 	if msg.Role != RoleUser {
 		t.Errorf("expected Role 'user', got '%s'", msg.Role)
 	}
-	if msg.Content != "Hello" {
-		t.Errorf("expected Content 'Hello', got '%s'", msg.Content)
+	if msg.Text() != "Hello" {
+		t.Errorf("expected Text() 'Hello', got '%s'", msg.Text())
+	}
+	if len(msg.Contents) != 1 {
+		t.Errorf("expected 1 content item, got %d", len(msg.Contents))
 	}
 	if msg.CreatedAt.Before(before) || msg.CreatedAt.After(after) {
 		t.Error("CreatedAt should be between before and after time")
@@ -370,8 +373,11 @@ func TestNewSystemMessage(t *testing.T) {
 	if msg.Role != RoleSystem {
 		t.Errorf("expected Role 'system', got '%s'", msg.Role)
 	}
-	if msg.Content != "You are helpful" {
-		t.Errorf("expected Content 'You are helpful', got '%s'", msg.Content)
+	if msg.Text() != "You are helpful" {
+		t.Errorf("expected Text() 'You are helpful', got '%s'", msg.Text())
+	}
+	if len(msg.Contents) != 1 {
+		t.Errorf("expected 1 content item, got %d", len(msg.Contents))
 	}
 	if msg.CreatedAt.Before(before) || msg.CreatedAt.After(after) {
 		t.Error("CreatedAt should be between before and after time")
@@ -390,8 +396,11 @@ func TestNewAssistantMessage(t *testing.T) {
 	if msg.Role != RoleAssistant {
 		t.Errorf("expected Role 'assistant', got '%s'", msg.Role)
 	}
-	if msg.Content != "I can help" {
-		t.Errorf("expected Content 'I can help', got '%s'", msg.Content)
+	if msg.Text() != "I can help" {
+		t.Errorf("expected Text() 'I can help', got '%s'", msg.Text())
+	}
+	if len(msg.Contents) != 1 {
+		t.Errorf("expected 1 content item, got %d", len(msg.Contents))
 	}
 	if msg.CreatedAt.Before(before) || msg.CreatedAt.After(after) {
 		t.Error("CreatedAt should be between before and after time")
@@ -404,7 +413,7 @@ func TestMessage_AllFields(t *testing.T) {
 	raw := map[string]interface{}{"provider": "test"}
 	msg := Message{
 		Role:              RoleTool,
-		Content:           "Tool result",
+		Contents:          []Content{NewTextContent("Tool result")},
 		Name:              "get_weather",
 		ToolCallID:        "call_123",
 		CreatedAt:         now,
@@ -415,8 +424,8 @@ func TestMessage_AllFields(t *testing.T) {
 	if msg.Role != RoleTool {
 		t.Errorf("expected Role 'tool', got '%s'", msg.Role)
 	}
-	if msg.Content != "Tool result" {
-		t.Errorf("expected Content 'Tool result', got '%s'", msg.Content)
+	if msg.Text() != "Tool result" {
+		t.Errorf("expected Text() 'Tool result', got '%s'", msg.Text())
 	}
 	if msg.Name != "get_weather" {
 		t.Errorf("expected Name 'get_weather', got '%s'", msg.Name)
@@ -496,8 +505,8 @@ func TestResponseUpdate_AllFields(t *testing.T) {
 			TextDelta: "Test",
 		},
 		Message: &Message{
-			Role:    RoleAssistant,
-			Content: "Complete message",
+			Role:     RoleAssistant,
+			Contents: []Content{NewTextContent("Complete message")},
 		},
 		Usage: &UsageDetails{
 			TotalTokens: 100,
@@ -514,8 +523,8 @@ func TestResponseUpdate_AllFields(t *testing.T) {
 	if update.Delta.TextDelta != "Test" {
 		t.Errorf("expected Delta.TextDelta 'Test', got '%s'", update.Delta.TextDelta)
 	}
-	if update.Message.Content != "Complete message" {
-		t.Errorf("expected Message.Content 'Complete message', got '%s'", update.Message.Content)
+	if update.Message.Text() != "Complete message" {
+		t.Errorf("expected Message.Text() 'Complete message', got '%s'", update.Message.Text())
 	}
 	if update.Usage.TotalTokens != 100 {
 		t.Errorf("expected Usage.TotalTokens 100, got %d", update.Usage.TotalTokens)
