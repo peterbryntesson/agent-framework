@@ -692,3 +692,83 @@ Implementation of User Stories 1.1.1, 1.1.2, 1.1.3, and 1.4.2 for the Microsoft 
 * `go build ./internal/validation/...` - Passed
 * `go vet ./internal/validation/...` - Passed
 * `go test ./internal/validation/... -cover` - 100.0% statement coverage
+
+---
+
+## User Story 1.5.1: Create Mock Implementations
+
+**Date**: 2026-02-02
+
+### Added
+
+* go/agent/mock_test.go - MockAgent implementation with:
+  * `MockAgent` struct implementing `agent.Agent` interface with configurable function fields
+  * `IDFunc`, `NameFunc`, `DescriptionFunc`, `MetadataFunc` for identity method customization
+  * `RunFunc`, `RunStreamFunc` for execution behavior customization
+  * `NewSessionFunc`, `RestoreSessionFunc` for session management customization
+  * `GetServiceFunc` for service locator customization
+  * `NewMockAgent()` constructor with default no-op behavior
+  * Fluent builder methods: `WithID()`, `WithName()`, `WithDescription()`, `WithResponse()`, `WithStreamUpdates()`, `WithSession()`
+  * Compile-time interface verification with `var _ agent.Agent = (*MockAgent)(nil)`
+
+* go/agent/mock_examples_test.go - Table-driven test patterns for MockAgent with:
+  * `TestMockAgent_Identity` - Tests identity methods (ID, Name, Description) with default and configured values
+  * `TestMockAgent_Run` - Tests Run method with configured responses, errors, and custom functions
+  * `TestMockAgent_RunStream` - Tests streaming with configured updates and error scenarios
+  * `TestMockAgent_Session` - Tests session creation with configured sessions and errors
+  * `TestMockAgent_ImplementsInterface` - Verifies interface compliance
+
+* go/chat/mock_test.go - MockChatClient implementation with:
+  * `MockChatClient` struct implementing `chat.Client` interface with configurable function fields
+  * `GetResponseFunc`, `GetStreamingResponseFunc`, `MetadataFunc` for customization
+  * `NewMockChatClient()` constructor with default no-op behavior
+  * Fluent builder methods: `WithMetadata()`, `WithResponse()`, `WithStreamingUpdates()`, `WithResponseFunc()`, `WithStreamingFunc()`
+  * Compile-time interface verification with `var _ chat.Client = (*MockChatClient)(nil)`
+
+* go/chat/mock_examples_test.go - Table-driven test patterns for MockChatClient with:
+  * `TestMockChatClient_GetResponse` - Tests GetResponse with configured responses, errors, and custom validation
+  * `TestMockChatClient_GetStreamingResponse` - Tests streaming with configured updates and error scenarios
+  * `TestMockChatClient_Metadata` - Tests metadata configuration
+  * `TestMockChatClient_ImplementsInterface` - Verifies interface compliance
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test ./... -count=1` - All tests passed
+  * github.com/microsoft/agent-framework-go/agent - 2.759s
+  * github.com/microsoft/agent-framework-go/chat - 2.826s
+
+---
+
+## Review Fix: User Story 1.5.1 Formatting
+
+**Date**: 2026-02-02
+
+### Modified
+
+* go/agent/mock_test.go - Applied `go fmt` formatting fixes
+* go/agent/mock_examples_test.go - Applied `go fmt` formatting fixes
+* go/chat/mock_test.go - Applied `go fmt` formatting fixes
+* go/chat/mock_examples_test.go - Applied `go fmt` formatting fixes
+
+### Validation Results
+
+* `go build ./...` - Passed
+* `go vet ./...` - Passed
+* `go test ./... -cover` - All tests passed
+  * agent: 89.7% statement coverage
+  * chat: 100.0% statement coverage
+  * internal/json: 100.0% statement coverage
+  * internal/validation: 100.0% statement coverage
+  * observability: 100.0% statement coverage
+
+### Review Summary
+
+User Story 1.5.1 meets all acceptance criteria:
+
+| Criterion | Status |
+|-----------|--------|
+| `MockAgent` implementing `Agent` interface with configurable function fields | ✅ Passed |
+| `MockChatClient` implementing `Client` interface with configurable function fields | ✅ Passed |
+| Table-driven test patterns established | ✅ Passed |
