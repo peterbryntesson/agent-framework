@@ -3,8 +3,10 @@
 package chatagent
 
 import (
+	"context"
 	"testing"
 
+	"github.com/microsoft/agent-framework-go/agent"
 	"github.com/microsoft/agent-framework-go/chat"
 	"github.com/microsoft/agent-framework-go/tool"
 )
@@ -280,6 +282,92 @@ func TestBuilderErrorPropagation(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error to propagate")
 	}
+}
+
+func TestBuilderUse(t *testing.T) {
+	client := newMockClient()
+	decoratorCalled := false
+
+	a, err := NewBuilder(client).
+		Name("TestAgent").
+		Use(func(inner agent.Agent) agent.Agent {
+			decoratorCalled = true
+			return agent.NewDelegatingAgent(inner)
+		}).
+		BuildAgent()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !decoratorCalled {
+		t.Error("decorator factory was not called")
+	}
+	if a.Name() != "TestAgent" {
+		t.Errorf("expected name 'TestAgent', got %q", a.Name())
+	}
+}
+
+func TestBuilderUseMiddleware(t *testing.T) {
+	client := newMockClient()
+	middlewareCalled := false
+
+	mw := agent.AgentMiddlewareFunc(func(ctx context.Context, agentCtx *agent.AgentContext, next agent.AgentHandler) error {
+		middlewareCalled = true
+		return next(ctx, agentCtx)
+	})
+
+	a, err := NewBuilder(client).
+		Name("TestAgent").
+		UseMiddleware(mw).
+		BuildAgent()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	_, err = a.Run(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("Run error: %v", err)
+	}
+	if !middlewareCalled {
+		t.Error("middleware was not called")
+	}
+}
+
+func TestBuilderBuildAgentWithoutFactories(t *testing.T) {
+	client := newMockClient()
+
+	a, err := NewBuilder(client).
+		Name("TestAgent").
+		BuildAgent()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if a.Name() != "TestAgent" {
+		t.Errorf("expected name 'TestAgent', got %q", a.Name())
+	}
+}
+
+func TestBuilderMustBuildAgent(t *testing.T) {
+	t.Run("succeeds with valid config", func(t *testing.T) {
+		client := newMockClient()
+		a := NewBuilder(client).MustBuildAgent()
+
+		if a == nil {
+			t.Fatal("expected agent")
+		}
+	})
+
+	t.Run("panics with invalid config", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatal("expected panic")
+			}
+		}()
+
+		NewBuilder(nil).MustBuildAgent()
+	})
 }
 
 // mockClient implementation for builder tests

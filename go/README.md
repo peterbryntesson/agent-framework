@@ -298,6 +298,236 @@ Explore the samples directory for complete examples:
 - [Workflows](./samples/workflows/): Multi-agent orchestration patterns
 - [Observability](./samples/observability/): OpenTelemetry tracing and metrics
 
+## Middleware
+
+Add cross-cutting behavior to agents using middleware. The framework provides three types of middleware:
+
+### Agent Middleware
+
+Intercept agent `Run` and `RunStream` calls:
+
+```go
+package main
+
+import (
+    "context"
+    "log"
+    "time"
+
+    "github.com/microsoft/agent-framework-go/agent"
+    "github.com/microsoft/agent-framework-go/chatagent"
+)
+
+// LoggingMiddleware logs agent invocations with timing
+func LoggingMiddleware() agent.AgentMiddleware {
+    return agent.AgentMiddlewareFunc(func(
+        ctx context.Context,
+        agentCtx *agent.AgentContext,
+        next agent.AgentHandler,
+    ) error {
+        start := time.Now()
+        log.Printf("Agent %s: starting", agentCtx.Agent.Name())
+
+        err := next(ctx, agentCtx)
+
+        log.Printf("Agent %s: completed in %v", agentCtx.Agent.Name(), time.Since(start))
+        return err
+    })
+}
+
+func main() {
+    // Use middleware with the builder
+    agent := chatagent.NewBuilder(client).
+        Name("MyAgent").
+        UseMiddleware(LoggingMiddleware()).
+        BuildAgent()
+}
+```
+
+### Function Middleware
+
+Intercept tool invocations:
+
+```go
+// ValidationMiddleware validates tool arguments before execution
+func ValidationMiddleware() agent.FunctionMiddleware {
+    return agent.FunctionMiddlewareFunc(func(
+        ctx context.Context,
+        funcCtx *agent.FunctionContext,
+        next agent.FunctionHandler,
+    ) error {
+        log.Printf("Calling tool: %s", funcCtx.FunctionName)
+
+        // Validate arguments before calling the tool
+        if len(funcCtx.Arguments) == 0 {
+            funcCtx.Error = errors.New("empty arguments not allowed")
+            return nil
+        }
+
+        return next(ctx, funcCtx)
+    })
+}
+
+func main() {
+    agent := chatagent.NewBuilder(client).
+        Name("ValidatedAgent").
+        UseFunctionMiddleware(ValidationMiddleware()).
+        Build()
+}
+```
+
+### Chat Middleware
+
+Intercept individual chat client requests (GetResponse/GetStreamingResponse). This operates at a lower level than AgentMiddleware, intercepting each chat request within the tool loop:
+
+```go
+// CachingMiddleware caches responses to avoid redundant API calls
+type CachingMiddleware struct {
+    cache map[string]*agent.ChatResponse
+    mu    sync.RWMutex
+}
+
+func (m *CachingMiddleware) Process(ctx context.Context, chatCtx *agent.ChatContext, next agent.ChatHandler) error {
+    // Skip caching for streaming requests
+    if chatCtx.IsStreaming {
+        return next(ctx, chatCtx)
+    }
+
+    key := computeCacheKey(chatCtx.Messages)
+
+    m.mu.RLock()
+    if cached, ok := m.cache[key]; ok {
+        m.mu.RUnlock()
+        chatCtx.Response = cached
+        return nil // Short-circuit, don't call next
+    }
+    m.mu.RUnlock()
+
+    if err := next(ctx, chatCtx); err != nil {
+        return err
+    }
+
+    m.mu.Lock()
+    m.cache[key] = chatCtx.Response
+    m.mu.Unlock()
+    return nil
+}
+
+func main() {
+    caching := &CachingMiddleware{cache: make(map[string]*agent.ChatResponse)}
+    agent := chatagent.NewBuilder(client).
+        Name("CachedAgent").
+        UseChatMiddleware(caching).
+        Build()
+}
+```
+
+Use ChatMiddleware for:
+
+- Response caching and memoization
+- Rate limiting and throttling
+- Request/response logging and metrics
+- Message transformation before sending
+
+### Chaining Middleware
+
+Chain multiple middleware using the builder or agent builder:
+
+```go
+// Using AgentBuilder for decorator pattern
+result := agent.NewAgentBuilder(func() agent.Agent {
+    return chatagent.New(client, chatagent.WithName("BaseAgent"))
+}).
+    UseMiddleware(LoggingMiddleware()).
+    UseMiddleware(TracingMiddleware()).
+    Use(func(inner agent.Agent) agent.Agent {
+        return NewCustomDecorator(inner)
+    }).
+    Build()
+```
+
+### Observability Middleware
+
+The framework provides telemetry middleware for OpenTelemetry integration:
+
+```go
+import "github.com/microsoft/agent-framework-go/observability"
+
+// Create telemetry middleware with default settings
+telemetry := observability.NewTelemetryMiddleware()
+
+// Or with custom options
+telemetry := observability.NewTelemetryMiddleware(
+    observability.WithTelemetrySensitiveData(false), // Don't log message content
+    observability.WithSourceName("my-app"),
+)
+
+// Add to agent builder
+agent := chatagent.NewBuilder(client).
+    UseMiddleware(telemetry).
+    BuildAgent()
+```
+
+#### Function Telemetry
+
+For tool/function call instrumentation:
+
+```go
+functionTelemetry := observability.NewFunctionTelemetryMiddleware()
+
+agent := chatagent.NewBuilder(client).
+    UseFunctionMiddleware(functionTelemetry).
+    BuildAgent()
+```
+
+#### Telemetry Data Captured
+
+| Category       | Data                                                                  |
+| -------------- | --------------------------------------------------------------------- |
+| **Spans**      | `agent.run`, `agent.run_stream`, `tool.call`                          |
+| **Attributes** | agent.id, agent.name, provider, model, tokens, finish_reason          |
+| **Metrics**    | agent.runs count, input/output tokens, latency histogram, error count |
+
+## Hierarchical Agents with AsTool
+
+Convert agents to tools for hierarchical delegation:
+
+```go
+package main
+
+import (
+    "github.com/microsoft/agent-framework-go/chatagent"
+)
+
+func main() {
+    // Create specialized agents
+    researcher := chatagent.New(client,
+        chatagent.WithName("Researcher"),
+        chatagent.WithDescription("Researches topics in depth"),
+        chatagent.WithInstructions("You perform detailed research on topics."),
+    )
+
+    writer := chatagent.New(client,
+        chatagent.WithName("Writer"),
+        chatagent.WithDescription("Writes content based on research"),
+        chatagent.WithInstructions("You write polished content."),
+    )
+
+    // Convert agents to tools
+    researchTool := chatagent.AsTool(researcher, chatagent.AsToolOptions{})
+    writeTool := chatagent.AsTool(writer, chatagent.AsToolOptions{})
+
+    // Create orchestrator that uses specialized agents as tools
+    orchestrator := chatagent.New(client,
+        chatagent.WithName("Orchestrator"),
+        chatagent.WithTools(researchTool, writeTool),
+        chatagent.WithInstructions("Coordinate research and writing tasks."),
+    )
+
+    response, _ := orchestrator.Run(ctx, "Research and write about AI agents")
+}
+```
+
 ## Documentation
 
 - [Go Package Documentation](https://pkg.go.dev/github.com/microsoft/agent-framework-go)

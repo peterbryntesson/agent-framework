@@ -3,19 +3,22 @@
 package chatagent
 
 import (
+	"github.com/microsoft/agent-framework-go/agent"
 	"github.com/microsoft/agent-framework-go/tool"
 )
 
 // config holds the configuration for creating a ChatClientAgent.
 // All fields have sensible defaults.
 type config struct {
-	id               string
-	name             string
-	description      string
-	instructions     string
-	tools            []tool.Tool
-	maxTurns         int
-	invocationConfig tool.InvocationConfig
+	id                 string
+	name               string
+	description        string
+	instructions       string
+	tools              []tool.Tool
+	maxTurns           int
+	invocationConfig   tool.InvocationConfig
+	functionMiddleware []agent.FunctionMiddleware
+	chatMiddleware     []agent.ChatMiddleware
 }
 
 // defaultConfig returns a config with sensible default values.
@@ -138,5 +141,23 @@ func WithParallelToolCalls(parallel bool) Option {
 func WithReturnIntermediateSteps(include bool) Option {
 	return func(c *config) {
 		c.invocationConfig.ReturnIntermediateSteps = include
+	}
+}
+
+// WithFunctionMiddleware adds middleware that intercepts tool/function invocations.
+// Middleware executes in the order provided for each tool call.
+func WithFunctionMiddleware(middlewares ...agent.FunctionMiddleware) Option {
+	return func(c *config) {
+		c.functionMiddleware = append(c.functionMiddleware, middlewares...)
+	}
+}
+
+// WithChatMiddleware adds middleware that intercepts chat client requests.
+// Middleware executes in the order provided, with the first middleware being outermost.
+// ChatMiddleware operates at a lower level than AgentMiddleware, intercepting
+// each individual GetResponse or GetStreamingResponse call within the tool loop.
+func WithChatMiddleware(middlewares ...agent.ChatMiddleware) Option {
+	return func(c *config) {
+		c.chatMiddleware = append(c.chatMiddleware, middlewares...)
 	}
 }

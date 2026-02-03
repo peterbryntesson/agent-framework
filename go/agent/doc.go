@@ -86,6 +86,40 @@ Use [RunOption] functions to customize agent behavior:
 		WithSession(session),
 	)
 
+# Middleware
+
+The agent package provides three middleware types for intercepting different
+levels of agent execution:
+
+  - [AgentMiddleware]: Intercepts full agent invocations (Run/RunStream calls)
+  - [FunctionMiddleware]: Intercepts tool/function invocations during execution
+  - [ChatMiddleware]: Intercepts chat client requests (GetResponse/GetStreamingResponse)
+
+Use [ChainAgentMiddleware], [ChainFunctionMiddleware], and [ChainChatMiddleware]
+to compose multiple middlewares into a single middleware.
+
+ChatMiddleware operates at the lowest level, intercepting each individual chat
+client request. This is useful for:
+
+  - Request caching and memoization
+  - Rate limiting and throttling
+  - Request/response logging
+  - Message transformation
+
+Example logging middleware:
+
+	type LoggingChatMiddleware struct {
+		Logger *slog.Logger
+	}
+
+	func (m *LoggingChatMiddleware) Process(ctx context.Context, chatCtx *ChatContext, next ChatHandler) error {
+		m.Logger.Info("Chat request", "messages", len(chatCtx.Messages))
+		start := time.Now()
+		err := next(ctx, chatCtx)
+		m.Logger.Info("Chat response", "duration", time.Since(start))
+		return err
+	}
+
 See the subpackages for specific agent implementations:
 
   - chatagent: ChatClientAgent for chat completion-based agents

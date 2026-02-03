@@ -70,3 +70,20 @@ func WithMetadata(metadata map[string]interface{}) RunOption {
 		}
 	}
 }
+
+// WithRunConfig applies an existing RunConfig as a run option.
+// This is useful for middleware that needs to pass through configuration.
+func WithRunConfig(config *RunConfig) RunOption {
+	return func(cfg *RunConfig) {
+		if config == nil {
+			return
+		}
+		cfg.Session = config.Session
+		cfg.MaxTokens = config.MaxTokens
+		cfg.Temperature = config.Temperature
+		cfg.Tools = append(cfg.Tools, config.Tools...)
+		for k, v := range config.Metadata {
+			cfg.Metadata[k] = v
+		}
+	}
+}

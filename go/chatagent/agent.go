@@ -29,7 +29,9 @@ type Agent struct {
 	maxTurns     int
 
 	// Invocation configuration
-	invocationConfig tool.InvocationConfig
+	invocationConfig   tool.InvocationConfig
+	functionMiddleware agent.FunctionMiddleware
+	chatMiddleware     agent.ChatMiddleware
 
 	// Services for extensibility
 	services map[reflect.Type]interface{}
@@ -49,15 +51,17 @@ func New(client chat.Client, opts ...Option) *Agent {
 	}
 
 	a := &Agent{
-		id:               cfg.id,
-		name:             cfg.name,
-		description:      cfg.description,
-		client:           client,
-		instructions:     cfg.instructions,
-		tools:            cfg.tools,
-		maxTurns:         cfg.maxTurns,
-		invocationConfig: cfg.invocationConfig,
-		services:         make(map[reflect.Type]interface{}),
+		id:                 cfg.id,
+		name:               cfg.name,
+		description:        cfg.description,
+		client:             client,
+		instructions:       cfg.instructions,
+		tools:              cfg.tools,
+		maxTurns:           cfg.maxTurns,
+		invocationConfig:   cfg.invocationConfig,
+		functionMiddleware: agent.ChainFunctionMiddleware(cfg.functionMiddleware...),
+		chatMiddleware:     agent.ChainChatMiddleware(cfg.chatMiddleware...),
+		services:           make(map[reflect.Type]interface{}),
 	}
 
 	// Generate ID if not provided
