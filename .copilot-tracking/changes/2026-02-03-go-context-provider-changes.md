@@ -20,7 +20,7 @@ Implements the ContextProvider pattern for the Go agent framework, enabling dyna
 
 * [go/chatagent/options.go](go/chatagent/options.go) - Added contextProviders field to config struct and WithContextProvider option function
 * [go/chatagent/agent.go](go/chatagent/agent.go) - Added contextProvider field to Agent struct, modified Run/RunStream to invoke providers, updated prepareMessages and prepareChatOptions to inject provider context, added getProviderContext and notifyProviderInvoked helper methods
-* [go/README.md](go/README.md) - Added Context Providers section with documentation and examples
+* [go/README.md](go/README.md) - Added Context Providers section with documentation and examples; added Middleware Execution Order section documenting the order in which middleware types execute during agent invocation
 
 ### Removed
 

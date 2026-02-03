@@ -488,6 +488,67 @@ agent := chatagent.NewBuilder(client).
 | **Attributes** | agent.id, agent.name, provider, model, tokens, finish_reason          |
 | **Metrics**    | agent.runs count, input/output tokens, latency histogram, error count |
 
+### Middleware Execution Order
+
+When an agent runs, middleware executes in a specific order. Understanding this order helps you design middleware that cooperates correctly.
+
+#### Execution Flow
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│ Agent.Run / Agent.RunStream                                         │
+├─────────────────────────────────────────────────────────────────────┤
+│  1. AgentMiddleware (outermost)                                     │
+│     ├── Pre-processing (before next())                              │
+│     │                                                               │
+│     │  2. ContextProvider.Invoking                                  │
+│     │     └── Injects instructions, messages, and tools             │
+│     │                                                               │
+│     │  3. Tool Loop (repeats until no tool calls)                   │
+│     │     ├── ChatMiddleware                                        │
+│     │     │   ├── Pre-processing                                    │
+│     │     │   ├── ChatClient.GetResponse / GetStreamingResponse     │
+│     │     │   └── Post-processing                                   │
+│     │     │                                                         │
+│     │     └── FunctionMiddleware (for each tool call)               │
+│     │         ├── Pre-processing                                    │
+│     │         ├── Tool.Invoke                                       │
+│     │         └── Post-processing                                   │
+│     │                                                               │
+│     │  4. ContextProvider.Invoked (lifecycle hook)                  │
+│     │     └── Receives request messages, response, and any error    │
+│     │                                                               │
+│     └── Post-processing (after next() returns)                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Middleware Levels
+
+| Level                | Scope                          | Use Cases                                         |
+| -------------------- | ------------------------------ | ------------------------------------------------- |
+| **AgentMiddleware**  | Entire Run/RunStream call      | Logging, tracing, authentication, rate limiting  |
+| **ContextProvider**  | Before/after agent invocation  | RAG, personalization, dynamic tool injection      |
+| **ChatMiddleware**   | Each chat client request       | Caching, request transformation, retry logic     |
+| **FunctionMiddleware** | Each tool invocation         | Validation, auditing, permission checks           |
+
+#### Chaining Order
+
+When chaining multiple middleware of the same type, they execute in registration order:
+
+```go
+agent := chatagent.NewBuilder(client).
+    UseMiddleware(First()).   // Runs first (outermost)
+    UseMiddleware(Second()).  // Runs second
+    UseMiddleware(Third()).   // Runs third (innermost)
+    BuildAgent()
+```
+
+For the call `agent.Run(ctx, messages)`:
+
+1. `First` pre-processing → `Second` pre-processing → `Third` pre-processing
+2. Actual agent execution
+3. `Third` post-processing → `Second` post-processing → `First` post-processing
+
 ## Context Providers
 
 Context providers enable dynamic context injection before each agent invocation. Use them to add user-specific personalization, retrieved documents (RAG), dynamic tool availability, or other context that varies per invocation.
