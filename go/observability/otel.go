@@ -1,19 +1,16 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-// Package observability provides OpenTelemetry integration for the Agent Framework.
-//
-// This package enables tracing, metrics, and logging for agent operations
-// using the OpenTelemetry standard. It follows the Semantic Conventions for
-// Generative AI Systems as defined by OpenTelemetry.
-//
-// See: https://opentelemetry.io/docs/specs/semconv/gen-ai/
 package observability
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/microsoft/agent-framework-go/chat"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -154,4 +151,106 @@ func RecordRequestOptions(span trace.Span, maxTokens int, temperature float32, t
 	if len(attrs) > 0 {
 		span.SetAttributes(attrs...)
 	}
+}
+
+// RecordUsageDetails records token usage attributes from a UsageDetails struct.
+func RecordUsageDetails(span trace.Span, usage *chat.UsageDetails) {
+	if usage == nil {
+		return
+	}
+
+	attrs := []attribute.KeyValue{
+		attribute.Int(GenAIUsageInputTokensKey, usage.InputTokens),
+		attribute.Int(GenAIUsageOutputTokensKey, usage.OutputTokens),
+	}
+
+	if usage.TotalTokens > 0 {
+		attrs = append(attrs, attribute.Int("gen_ai.usage.total_tokens", usage.TotalTokens))
+	}
+
+	if usage.CachedTokens > 0 {
+		attrs = append(attrs, attribute.Int("gen_ai.usage.cached_tokens", usage.CachedTokens))
+	}
+
+	if usage.ReasoningTokens > 0 {
+		attrs = append(attrs, attribute.Int("gen_ai.usage.reasoning_tokens", usage.ReasoningTokens))
+	}
+
+	span.SetAttributes(attrs...)
+}
+
+// RecordError adds error attributes to the current span and marks it as errored.
+func RecordError(span trace.Span, err error) {
+	if err == nil {
+		return
+	}
+
+	span.RecordError(err)
+	span.SetStatus(codes.Error, err.Error())
+	span.SetAttributes(
+		attribute.String("gen_ai.error.type", fmt.Sprintf("%T", err)),
+		attribute.String("gen_ai.error.message", err.Error()),
+	)
+}
+
+// EndSpanWithError ends a span, recording an error if present.
+func EndSpanWithError(span trace.Span, err error) {
+	if err != nil {
+		RecordError(span, err)
+	}
+	span.End()
+}
+
+// StartToolSpan starts a new span for a tool/function call operation.
+func StartToolSpan(ctx context.Context, toolName, callID string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	spanName := OperationToolCall + " " + toolName
+
+	attrs := []attribute.KeyValue{
+		attribute.String(GenAIOperationNameKey, OperationToolCall),
+		attribute.String("gen_ai.tool.name", toolName),
+	}
+
+	if callID != "" {
+		attrs = append(attrs, attribute.String("gen_ai.tool.call_id", callID))
+	}
+
+	return Tracer().Start(ctx, spanName,
+		append(opts,
+			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(attrs...),
+		)...,
+	)
+}
+
+// SpanFromContext returns the current span from context, if any.
+func SpanFromContext(ctx context.Context) trace.Span {
+	return trace.SpanFromContext(ctx)
+}
+
+// StartAgentSpanWithID starts a new span for an agent operation with ID.
+func StartAgentSpanWithID(ctx context.Context, agentID, agentName, providerName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	spanName := OperationAgentRun
+	if agentName != "" {
+		spanName = OperationAgentRun + " " + agentName
+	}
+
+	attrs := []attribute.KeyValue{
+		attribute.String(GenAIOperationNameKey, OperationAgentRun),
+		attribute.String(AgentIDKey, agentID),
+	}
+
+	if agentName != "" {
+		attrs = append(attrs, attribute.String(AgentNameKey, agentName))
+	}
+
+	if providerName != "" {
+		attrs = append(attrs, attribute.String(AgentProviderKey, providerName))
+	}
+
+	return Tracer().Start(ctx, spanName,
+		append(opts,
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(attrs...),
+		)...,
+	)
 }

@@ -105,5 +105,18 @@ Implementation of Epic 2 for the Go SDK port, covering LLM provider implementati
   * Achieved 86.7% code coverage for unit tests (note: 90%+ target partially limited by internal streaming code paths requiring actual OpenAI stream objects)
   * Total test count: 113+ tests (226 test lines including subtests)
   * Verified with go build, go vet, and go test (all tests pass)
+* Feature 2.7 (OpenTelemetry Observability Package) implemented:
+  * go/observability/semconv.go - Additional GenAI semantic convention constants for metric names (MetricAgentRuns, MetricTokensInput, MetricTokensOutput, MetricRequestLatency, MetricErrors, MetricToolInvocations) and attribute keys (GenAIAgentIDKey, GenAIAgentNameKey, GenAIProviderNameKey, GenAIErrorTypeKey, GenAIToolNameKey, etc.) complementing otel.go
+  * go/observability/otel.go - Extended with RecordUsageDetails (for chat.UsageDetails), RecordError (with status code), EndSpanWithError, StartToolSpan, SpanFromContext, and StartAgentSpanWithID functions; added chat package import and codes import for error handling
+  * go/observability/metrics.go - Metrics struct with Int64Counter and Float64Histogram instruments; NewMetrics creates all instruments; RecordAgentRun, RecordTokenUsage, RecordLatency, RecordError, RecordToolInvocation methods; DefaultMetrics singleton pattern
+  * go/observability/instrumented.go - InstrumentedClient wrapping chat.Client with automatic tracing and metrics; GetResponse and GetStreamingResponse with span creation, usage recording, latency measurement, error tracking; InstrumentedClientOption pattern with WithSensitiveData and WithMetrics; InstrumentedAgentClient for agent-level instrumentation with StartRun returning completion callback; context helpers (ContextWithMetrics, MetricsFromContext, RecordAgentRunFromContext, etc.)
+  * go/observability/setup.go - Setup function for OpenTelemetry configuration with OTLP gRPC export; SetupConfig with ServiceName, ServiceVersion, EnableTracing, EnableMetrics; SetupOption pattern with WithServiceVersion, WithTraceExporter, WithMetricExporter, WithSampler, WithPropagators; SetupTracing and SetupMetrics convenience functions; buildResource, setupTracing, setupMetrics internal functions
+  * go/observability/doc.go - Comprehensive package documentation with overview, quick start, semantic conventions, tracing, metrics, instrumented client, configuration, and environment variable sections
+  * go/observability/semconv_test.go - 10 tests covering metric names, agent/provider/token/error/tool attributes, naming conventions, and otel.go constants
+  * go/observability/metrics_test.go - 14 tests covering NewMetrics, RecordAgentRun, RecordTokenUsage, RecordLatency, RecordError, RecordToolInvocation, DefaultMetrics singleton, concurrent recordings, and multi-provider scenarios
+  * go/observability/instrumented_test.go - 28 tests covering InstrumentedClient creation, interface compliance, GetResponse success/error, GetStreamingResponse success/error, streaming error handling, convenience functions, context helpers, InstrumentedAgentClient, and concurrent requests
+  * go/observability/setup_test.go - 12 tests covering DefaultSetupConfig, option functions, setup with disabled providers, convenience functions, and option chaining
+  * All 74 observability tests pass; go build and go vet clean
+  * Added go.mod dependencies: go.opentelemetry.io/otel/sdk/metric v1.40.0, go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.40.0, go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.40.0
 
 <!-- Include after final phase: total files affected, files created/modified/removed with paths and purposes, dependency and infrastructure changes, deployment notes -->
