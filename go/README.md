@@ -488,6 +488,144 @@ agent := chatagent.NewBuilder(client).
 | **Attributes** | agent.id, agent.name, provider, model, tokens, finish_reason          |
 | **Metrics**    | agent.runs count, input/output tokens, latency histogram, error count |
 
+## Context Providers
+
+Context providers enable dynamic context injection before each agent invocation. Use them to add user-specific personalization, retrieved documents (RAG), dynamic tool availability, or other context that varies per invocation.
+
+### Basic Usage
+
+```go
+package main
+
+import (
+    "context"
+
+    "github.com/microsoft/agent-framework-go/agent"
+    "github.com/microsoft/agent-framework-go/chatagent"
+)
+
+func main() {
+    // Create a simple context provider using a function
+    userContextProvider := agent.ContextProviderFunc(
+        func(ctx context.Context, messages []agent.Message) (*agent.Context, error) {
+            // Retrieve user-specific context (e.g., from database)
+            userPrefs := getUserPreferences(ctx)
+
+            return &agent.Context{
+                Instructions: "User prefers responses in " + userPrefs.Language,
+                Messages:     nil, // Additional context messages if needed
+                Tools:        nil, // Additional tools if needed
+            }, nil
+        },
+    )
+
+    // Create an agent with the context provider
+    myAgent := chatagent.New(client,
+        chatagent.WithInstructions("You are a helpful assistant."),
+        chatagent.WithContextProvider(userContextProvider),
+    )
+
+    response, _ := myAgent.Run(ctx, "Hello!")
+}
+```
+
+### RAG Context Provider Example
+
+```go
+// RAGProvider retrieves relevant documents for each query
+type RAGProvider struct {
+    vectorStore VectorStore
+}
+
+func (r *RAGProvider) Invoking(ctx context.Context, messages []agent.Message) (*agent.Context, error) {
+    // Get the last user message as the query
+    var query string
+    for i := len(messages) - 1; i >= 0; i-- {
+        if messages[i].Role == chat.RoleUser {
+            query = messages[i].Text()
+            break
+        }
+    }
+
+    // Retrieve relevant documents
+    docs, err := r.vectorStore.Search(ctx, query, 5)
+    if err != nil {
+        return nil, err
+    }
+
+    // Convert documents to context messages
+    var contextMessages []chat.Message
+    for _, doc := range docs {
+        contextMessages = append(contextMessages, chat.NewUserMessage(
+            fmt.Sprintf("Reference document: %s", doc.Content),
+        ))
+    }
+
+    return &agent.Context{
+        Instructions: "Use the reference documents to answer the user's question.",
+        Messages:     contextMessages,
+    }, nil
+}
+
+func main() {
+    ragProvider := &RAGProvider{vectorStore: myVectorStore}
+
+    agent := chatagent.New(client,
+        chatagent.WithContextProvider(ragProvider),
+    )
+}
+```
+
+### Multiple Context Providers
+
+Combine multiple providers for different concerns:
+
+```go
+agent := chatagent.New(client,
+    chatagent.WithContextProvider(
+        userProfileProvider,    // User personalization
+        ragProvider,            // Document retrieval
+        featureFlagProvider,    // Dynamic feature toggles
+    ),
+)
+```
+
+When using multiple providers, their contexts are merged:
+
+- Instructions are concatenated with newlines
+- Messages are appended in provider order
+- Tools are merged in provider order
+
+### Lifecycle Hooks
+
+For providers that need to track conversation state, implement `ContextProviderWithLifecycle`:
+
+```go
+type ConversationTracker struct {
+    agent.BaseContextProvider // Embed for default implementations
+    history map[string][]agent.Message
+}
+
+func (c *ConversationTracker) Invoking(ctx context.Context, messages []agent.Message) (*agent.Context, error) {
+    // Return context based on conversation history
+    return &agent.Context{}, nil
+}
+
+func (c *ConversationTracker) Invoked(ctx context.Context, request, response []agent.Message, err error) error {
+    // Track the conversation after each invocation
+    sessionID := getSessionID(ctx)
+    c.history[sessionID] = append(c.history[sessionID], request...)
+    c.history[sessionID] = append(c.history[sessionID], response...)
+    return nil
+}
+
+func (c *ConversationTracker) SessionCreated(ctx context.Context, sessionID string) error {
+    // Initialize tracking for new sessions
+    c.history[sessionID] = []agent.Message{}
+    return nil
+}
+```
+
 ## Hierarchical Agents with AsTool
 
 Convert agents to tools for hierarchical delegation:
@@ -541,7 +679,7 @@ func main() {
 
 ```text
 github.com/microsoft/agent-framework-go/
-├── agent/          # Core Agent interface and response types
+├── agent/          # Core Agent interface, response types, and ContextProvider
 ├── chat/           # ChatClient interface and message types
 ├── chatagent/      # ChatClientAgent implementation
 ├── tool/           # Tool interface and FunctionTool

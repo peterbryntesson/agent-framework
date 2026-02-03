@@ -19,6 +19,7 @@ type config struct {
 	invocationConfig   tool.InvocationConfig
 	functionMiddleware []agent.FunctionMiddleware
 	chatMiddleware     []agent.ChatMiddleware
+	contextProviders   []agent.ContextProvider
 }
 
 // defaultConfig returns a config with sensible default values.
@@ -159,5 +160,25 @@ func WithFunctionMiddleware(middlewares ...agent.FunctionMiddleware) Option {
 func WithChatMiddleware(middlewares ...agent.ChatMiddleware) Option {
 	return func(c *config) {
 		c.chatMiddleware = append(c.chatMiddleware, middlewares...)
+	}
+}
+
+// WithContextProvider adds context providers to the agent.
+// Context providers inject dynamic instructions, messages, and tools
+// before each agent invocation.
+//
+// Multiple providers can be added by calling this option multiple times
+// or by passing multiple providers in a single call.
+// Providers are invoked in the order they are added.
+//
+// Example:
+//
+//	a := chatagent.New(client,
+//	    chatagent.WithContextProvider(userProfileProvider),
+//	    chatagent.WithContextProvider(ragProvider, featureFlagProvider),
+//	)
+func WithContextProvider(providers ...agent.ContextProvider) Option {
+	return func(c *config) {
+		c.contextProviders = append(c.contextProviders, providers...)
 	}
 }

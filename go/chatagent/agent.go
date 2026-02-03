@@ -5,6 +5,7 @@ package chatagent
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -32,6 +33,7 @@ type Agent struct {
 	invocationConfig   tool.InvocationConfig
 	functionMiddleware agent.FunctionMiddleware
 	chatMiddleware     agent.ChatMiddleware
+	contextProvider    agent.ContextProvider
 
 	// Services for extensibility
 	services map[reflect.Type]interface{}
@@ -62,6 +64,15 @@ func New(client chat.Client, opts ...Option) *Agent {
 		functionMiddleware: agent.ChainFunctionMiddleware(cfg.functionMiddleware...),
 		chatMiddleware:     agent.ChainChatMiddleware(cfg.chatMiddleware...),
 		services:           make(map[reflect.Type]interface{}),
+	}
+
+	// Initialize context provider
+	if len(cfg.contextProviders) > 0 {
+		if len(cfg.contextProviders) == 1 {
+			a.contextProvider = cfg.contextProviders[0]
+		} else {
+			a.contextProvider = agent.NewAggregateContextProvider(cfg.contextProviders...)
+		}
 	}
 
 	// Generate ID if not provided
@@ -108,22 +119,39 @@ func (a *Agent) Metadata() agent.AIAgentMetadata {
 func (a *Agent) Run(ctx context.Context, messages []agent.Message, opts ...agent.RunOption) (*agent.Response, error) {
 	cfg := agent.ApplyRunOptions(opts...)
 
-	// Prepare messages with instructions
-	chatMessages := a.prepareMessages(messages, cfg)
+	// Get dynamic context from provider
+	providerCtx, err := a.getProviderContext(ctx, messages)
+	if err != nil {
+		return nil, fmt.Errorf("context provider error: %w", err)
+	}
 
-	// Prepare chat options with tools
-	chatOptions := a.prepareChatOptions(cfg)
+	// Prepare messages with instructions and provider context
+	chatMessages := a.prepareMessages(messages, cfg, providerCtx)
+
+	// Prepare chat options with tools and provider tools
+	chatOptions := a.prepareChatOptions(cfg, providerCtx)
 
 	// Execute with tool invocation loop
-	return a.runWithToolLoop(ctx, chatMessages, chatOptions, cfg)
+	response, runErr := a.runWithToolLoop(ctx, chatMessages, chatOptions, cfg)
+
+	// Notify provider of completion (best effort, don't fail on error)
+	a.notifyProviderInvoked(ctx, messages, response, runErr)
+
+	return response, runErr
 }
 
 // RunStream executes the agent and returns a channel of incremental response updates.
 func (a *Agent) RunStream(ctx context.Context, messages []agent.Message, opts ...agent.RunOption) (<-chan agent.ResponseUpdate, error) {
 	cfg := agent.ApplyRunOptions(opts...)
 
-	chatMessages := a.prepareMessages(messages, cfg)
-	chatOptions := a.prepareChatOptions(cfg)
+	// Get dynamic context from provider
+	providerCtx, err := a.getProviderContext(ctx, messages)
+	if err != nil {
+		return nil, fmt.Errorf("context provider error: %w", err)
+	}
+
+	chatMessages := a.prepareMessages(messages, cfg, providerCtx)
+	chatOptions := a.prepareChatOptions(cfg, providerCtx)
 
 	return a.runStreamWithToolLoop(ctx, chatMessages, chatOptions, cfg)
 }
@@ -169,42 +197,67 @@ func (a *Agent) Instructions() string {
 }
 
 // prepareMessages prepares messages for the chat client.
-// Adds system instructions and session history.
-func (a *Agent) prepareMessages(messages []agent.Message, cfg *agent.RunConfig) []chat.Message {
-	// Calculate capacity: instructions + session messages + new messages
+// Adds system instructions, provider context, and session history.
+func (a *Agent) prepareMessages(messages []agent.Message, cfg *agent.RunConfig, providerCtx *agent.Context) []chat.Message {
+	// Calculate capacity: instructions + provider messages + session messages + new messages
 	capacity := len(messages) + 1
 	if cfg.Session != nil {
 		capacity += len(cfg.Session.Messages())
 	}
+	if providerCtx != nil {
+		capacity += len(providerCtx.Messages) + 1 // +1 for potential provider instructions
+	}
 
 	chatMessages := make([]chat.Message, 0, capacity)
 
-	// Add system instructions if configured
-	if a.instructions != "" {
-		chatMessages = append(chatMessages, chat.NewSystemMessage(a.instructions))
+	// 1. Combine base agent instructions with provider instructions
+	instructions := a.instructions
+	if providerCtx != nil && providerCtx.Instructions != "" {
+		if instructions != "" {
+			instructions = instructions + "\n" + providerCtx.Instructions
+		} else {
+			instructions = providerCtx.Instructions
+		}
 	}
 
-	// Add session history if provided
+	// 2. Add combined system instructions
+	if instructions != "" {
+		chatMessages = append(chatMessages, chat.NewSystemMessage(instructions))
+	}
+
+	// 3. Add provider messages (context, examples, retrieved documents)
+	if providerCtx != nil && len(providerCtx.Messages) > 0 {
+		chatMessages = append(chatMessages, providerCtx.Messages...)
+	}
+
+	// 4. Add session history if provided
 	if cfg.Session != nil {
 		chatMessages = append(chatMessages, cfg.Session.Messages()...)
 	}
 
-	// Add new messages
+	// 5. Add new messages from this invocation
 	chatMessages = append(chatMessages, messages...)
 
 	return chatMessages
 }
 
 // prepareChatOptions creates chat.Options from run configuration.
-func (a *Agent) prepareChatOptions(cfg *agent.RunConfig) *chat.Options {
+func (a *Agent) prepareChatOptions(cfg *agent.RunConfig, providerCtx *agent.Context) *chat.Options {
 	opts := chat.NewOptions()
 
-	// Convert agent tools to chat tool definitions
+	// 1. Add base agent tools
 	for _, t := range a.tools {
 		opts.Tools = append(opts.Tools, toolToDefinition(t))
 	}
 
-	// Add run-specific tools
+	// 2. Add provider tools
+	if providerCtx != nil {
+		for _, t := range providerCtx.Tools {
+			opts.Tools = append(opts.Tools, toolToDefinition(t))
+		}
+	}
+
+	// 3. Add run-specific tools (highest priority)
 	for _, t := range cfg.Tools {
 		if ft, ok := t.(tool.Tool); ok {
 			opts.Tools = append(opts.Tools, toolToDefinition(ft))
@@ -284,4 +337,45 @@ func (a *Agent) getAllTools(cfg *agent.RunConfig) []tool.Tool {
 	}
 
 	return allTools
+}
+
+// getProviderContext invokes the context provider and returns the context to inject.
+// Returns nil if no context provider is configured.
+func (a *Agent) getProviderContext(ctx context.Context, messages []agent.Message) (*agent.Context, error) {
+	if a.contextProvider == nil {
+		return nil, nil
+	}
+	return a.contextProvider.Invoking(ctx, messages)
+}
+
+// notifyProviderInvoked calls the Invoked lifecycle hook on the context provider.
+// This is a best-effort notification; errors are logged but not returned.
+func (a *Agent) notifyProviderInvoked(ctx context.Context, request []agent.Message, response *agent.Response, invokeErr error) {
+	if a.contextProvider == nil {
+		return
+	}
+	lcp, ok := a.contextProvider.(agent.ContextProviderWithLifecycle)
+	if !ok {
+		return
+	}
+	var responseMessages []agent.Message
+	if response != nil {
+		responseMessages = response.Messages
+	}
+	// Best effort - log error but don't propagate
+	_ = lcp.Invoked(ctx, request, responseMessages, invokeErr)
+}
+
+// notifyProviderSessionCreated calls the SessionCreated lifecycle hook on the context provider.
+// This is a best-effort notification; errors are logged but not returned.
+func (a *Agent) notifyProviderSessionCreated(ctx context.Context, sessionID string) {
+	if a.contextProvider == nil {
+		return
+	}
+	lcp, ok := a.contextProvider.(agent.ContextProviderWithLifecycle)
+	if !ok {
+		return
+	}
+	// Best effort - log error but don't propagate
+	_ = lcp.SessionCreated(ctx, sessionID)
 }
