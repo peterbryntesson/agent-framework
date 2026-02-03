@@ -241,10 +241,10 @@ func TestResponsesClient_GetResponseWithTools(t *testing.T) {
 
 		// Send response with function call
 		resp := map[string]interface{}{
-			"id":      "resp_002",
-			"object":  "realtime.response",
-			"status":  "completed",
-			"model":   "gpt-4o",
+			"id":     "resp_002",
+			"object": "realtime.response",
+			"status": "completed",
+			"model":  "gpt-4o",
 			"output": []map[string]interface{}{
 				{
 					"type":      "function_call",
@@ -618,8 +618,8 @@ func createMockFunctionTool(name, description string) *mockFunctionTool {
 	return &mockFunctionTool{name: name, description: description}
 }
 
-func (t *mockFunctionTool) Name() string           { return t.name }
-func (t *mockFunctionTool) Description() string    { return t.description }
+func (t *mockFunctionTool) Name() string        { return t.name }
+func (t *mockFunctionTool) Description() string { return t.description }
 func (t *mockFunctionTool) Parameters() json.RawMessage {
 	return json.RawMessage(`{"type":"object","properties":{"location":{"type":"string"}}}`)
 }

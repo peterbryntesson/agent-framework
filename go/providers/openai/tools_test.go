@@ -37,7 +37,7 @@ func (t *mockHostedTool) Parameters() json.RawMessage { return nil }
 func (t *mockHostedTool) Invoke(ctx context.Context, args json.RawMessage) (tool.Result, error) {
 	return tool.Result{}, nil
 }
-func (t *mockHostedTool) IsHosted() bool                       { return true }
+func (t *mockHostedTool) IsHosted() bool                         { return true }
 func (t *mockHostedTool) ProviderConfig() map[string]interface{} { return t.config }
 
 func TestConvertToolsToOpenAI(t *testing.T) {
@@ -264,10 +264,10 @@ func TestSeparateTools(t *testing.T) {
 	hostedTool2 := &mockHostedTool{name: "code_interpreter", config: map[string]interface{}{}}
 
 	tests := []struct {
-		name            string
-		tools           []tool.Tool
-		expectedFunc    int
-		expectedHosted  int
+		name           string
+		tools          []tool.Tool
+		expectedFunc   int
+		expectedHosted int
 	}{
 		{
 			name:           "empty slice",
