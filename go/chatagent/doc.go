@@ -71,6 +71,113 @@
 //	}, agent.WithSession(session))
 //	// Response will know the name is Alice
 //
+// # Agent as Tool
+//
+// The AsTool function converts an agent to a tool for use by other agents,
+// enabling hierarchical agent patterns:
+//
+//	// Create a specialized research agent
+//	researcher := chatagent.New(researchClient,
+//	    chatagent.WithName("Researcher"),
+//	    chatagent.WithDescription("Performs in-depth research on topics"),
+//	    chatagent.WithInstructions("You are a research specialist..."),
+//	)
+//
+//	// Convert to tool with custom options
+//	researchTool := chatagent.AsTool(researcher, chatagent.AsToolOptions{
+//	    Name:           "research",
+//	    Description:    "Research a topic thoroughly",
+//	    ArgName:        "topic",
+//	    ArgDescription: "The topic to research",
+//	})
+//
+//	// Use in an orchestrator agent
+//	orchestrator := chatagent.New(client,
+//	    chatagent.WithName("Orchestrator"),
+//	    chatagent.WithTools(researchTool),
+//	)
+//
+// # Streaming Sub-Agents
+//
+// Use StreamCallback to receive incremental updates from sub-agents:
+//
+//	researchTool := chatagent.AsTool(researcher, chatagent.AsToolOptions{
+//	    StreamCallback: func(update agent.ResponseUpdate) {
+//	        if update.Delta != nil && update.Delta.TextDelta != "" {
+//	            fmt.Print(update.Delta.TextDelta)
+//	        }
+//	    },
+//	})
+//
+// # Runtime Context Propagation
+//
+// Forward runtime context (user IDs, API tokens, session data) to sub-agents:
+//
+//	researchTool := chatagent.AsTool(researcher, chatagent.AsToolOptions{
+//	    ForwardRuntimeContext: true,
+//	})
+//
+//	// Run with runtime context that propagates to all sub-agents
+//	ctx := agent.WithRuntimeCtx(context.Background(),
+//	    agent.NewRuntimeContext().
+//	        With("user_id", "u123").
+//	        With("api_token", "tok_abc"),
+//	)
+//
+//	resp, err := orchestrator.Run(ctx, messages)
+//
+// Session-related keys (session_id, conversation_id, thread_id) are automatically
+// excluded from propagation. Use ExcludeKeys to exclude additional keys.
+//
+// # Hierarchical Agent Orchestration
+//
+// Complex tasks can be broken down using multiple specialized agents:
+//
+//	// Create specialized agents
+//	researcher := chatagent.New(client,
+//	    chatagent.WithName("Researcher"),
+//	    chatagent.WithInstructions("You research topics thoroughly."),
+//	)
+//
+//	writer := chatagent.New(client,
+//	    chatagent.WithName("Writer"),
+//	    chatagent.WithInstructions("You write clear, engaging content."),
+//	)
+//
+//	coder := chatagent.New(client,
+//	    chatagent.WithName("Coder"),
+//	    chatagent.WithInstructions("You write clean, tested code."),
+//	)
+//
+//	// Convert agents to tools with context forwarding
+//	tools := []tool.Tool{
+//	    chatagent.AsTool(researcher, chatagent.AsToolOptions{
+//	        Name:                  "research",
+//	        Description:           "Research a topic",
+//	        ForwardRuntimeContext: true,
+//	    }),
+//	    chatagent.AsTool(writer, chatagent.AsToolOptions{
+//	        Name:                  "write",
+//	        Description:           "Write content based on research",
+//	        ForwardRuntimeContext: true,
+//	    }),
+//	    chatagent.AsTool(coder, chatagent.AsToolOptions{
+//	        Name:                  "code",
+//	        Description:           "Implement code solutions",
+//	        ForwardRuntimeContext: true,
+//	    }),
+//	}
+//
+//	// Create orchestrator that uses specialized agents
+//	orchestrator := chatagent.New(client,
+//	    chatagent.WithName("Orchestrator"),
+//	    chatagent.WithInstructions(`You coordinate complex tasks by delegating to:
+//	- research: for gathering information
+//	- write: for creating content
+//	- code: for implementing solutions`),
+//	    chatagent.WithTools(tools...),
+//	)
+//
 // # Builder Pattern
 //
 // For more complex configuration, use the fluent builder:

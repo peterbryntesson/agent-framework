@@ -13,6 +13,13 @@ import (
 	"github.com/microsoft/agent-framework-go/tool"
 )
 
+// excludedSessionKeys are keys that should not propagate to sub-agents by default.
+var excludedSessionKeys = map[string]bool{
+	"session_id":      true,
+	"conversation_id": true,
+	"thread_id":       true,
+}
+
 // AsToolOptions configures agent-to-tool conversion.
 type AsToolOptions struct {
 	// Name overrides the tool name (defaults to sanitized agent name).
@@ -30,6 +37,31 @@ type AsToolOptions struct {
 	// StreamCallback receives streaming updates when set.
 	// If nil, the tool uses non-streaming invocation.
 	StreamCallback func(agent.ResponseUpdate)
+
+	// ApprovalMode specifies when user approval is required.
+	// Defaults to ApprovalNever.
+	ApprovalMode tool.ApprovalMode
+
+	// ForwardRuntimeContext enables runtime context propagation to sub-agent.
+	// When true, RuntimeContext values are forwarded (excluding session keys).
+	ForwardRuntimeContext bool
+
+	// ExcludeKeys specifies additional keys to exclude from context forwarding.
+	ExcludeKeys []string
+
+	// PreserveCase keeps the original casing when sanitizing the agent name.
+	// Default is false (names are lowercased).
+	PreserveCase bool
+}
+
+// excludeKey checks if a key should be excluded from forwarding.
+func (o *AsToolOptions) excludeKey(key string) bool {
+	for _, k := range o.ExcludeKeys {
+		if k == key {
+			return true
+		}
+	}
+	return false
 }
 
 // AsTool converts an agent to a tool for use by other agents.
@@ -88,9 +120,29 @@ func AsTool(a agent.Agent, opts AsToolOptions) tool.Tool {
 		input := parsed[argName]
 		messages := []agent.Message{agent.NewUserMessage(input)}
 
+		// Build run options with forwarded runtime context
+		var runOpts []agent.RunOption
+
+		if opts.ForwardRuntimeContext {
+			// Extract runtime context from context.Context
+			parentCtx := agent.RuntimeCtxFromContext(ctx)
+
+			// Create filtered context excluding session-related keys
+			filteredCtx := agent.NewRuntimeContext()
+			for k, v := range parentCtx.Values() {
+				if !excludedSessionKeys[k] && !opts.excludeKey(k) {
+					filteredCtx = filteredCtx.With(k, v)
+				}
+			}
+
+			if filteredCtx.Len() > 0 {
+				runOpts = append(runOpts, agent.WithRuntimeContext(filteredCtx))
+			}
+		}
+
 		if opts.StreamCallback != nil {
 			// Streaming mode
-			updates, err := a.RunStream(ctx, messages)
+			updates, err := a.RunStream(ctx, messages, runOpts...)
 			if err != nil {
 				return "", err
 			}
@@ -107,7 +159,7 @@ func AsTool(a agent.Agent, opts AsToolOptions) tool.Tool {
 		}
 
 		// Non-streaming mode
-		resp, err := a.Run(ctx, messages)
+		resp, err := a.Run(ctx, messages, runOpts...)
 		if err != nil {
 			return "", err
 		}
@@ -116,19 +168,21 @@ func AsTool(a agent.Agent, opts AsToolOptions) tool.Tool {
 	}
 
 	return &agentTool{
-		name:        name,
-		description: desc,
-		parameters:  paramsJSON,
-		invoke:      fn,
+		name:         name,
+		description:  desc,
+		parameters:   paramsJSON,
+		invoke:       fn,
+		approvalMode: opts.ApprovalMode,
 	}
 }
 
 // agentTool implements tool.Tool for agent invocation.
 type agentTool struct {
-	name        string
-	description string
-	parameters  json.RawMessage
-	invoke      func(ctx context.Context, args json.RawMessage) (string, error)
+	name         string
+	description  string
+	parameters   json.RawMessage
+	invoke       func(ctx context.Context, args json.RawMessage) (string, error)
+	approvalMode tool.ApprovalMode
 }
 
 // Name returns the tool name.
@@ -144,6 +198,11 @@ func (t *agentTool) Description() string {
 // Parameters returns the JSON schema for tool parameters.
 func (t *agentTool) Parameters() json.RawMessage {
 	return t.parameters
+}
+
+// GetApprovalMode returns the tool's approval mode.
+func (t *agentTool) GetApprovalMode() tool.ApprovalMode {
+	return t.approvalMode
 }
 
 // Invoke executes the tool.
@@ -173,8 +232,14 @@ func sanitizeAgentName(name string) string {
 	// Ensure lowercase
 	sanitized = strings.ToLower(sanitized)
 
+	// Handle empty result
 	if sanitized == "" {
-		sanitized = "agent"
+		return "agent"
+	}
+
+	// Prefix with underscore if starts with digit
+	if len(sanitized) > 0 && sanitized[0] >= '0' && sanitized[0] <= '9' {
+		sanitized = "_" + sanitized
 	}
 
 	return sanitized

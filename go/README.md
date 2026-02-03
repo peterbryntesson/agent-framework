@@ -197,6 +197,88 @@ func main() {
 }
 ```
 
+## Multi-Agent Orchestration
+
+The framework supports hierarchical agent patterns where one agent can use other agents as tools. This enables complex task decomposition and delegation.
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "os"
+
+    "github.com/microsoft/agent-framework-go/agent"
+    "github.com/microsoft/agent-framework-go/chatagent"
+    "github.com/microsoft/agent-framework-go/providers/openai"
+    "github.com/microsoft/agent-framework-go/tool"
+)
+
+func main() {
+    ctx := context.Background()
+
+    client, err := openai.NewClient(
+        openai.WithAPIKey(os.Getenv("OPENAI_API_KEY")),
+        openai.WithModel("gpt-4o"),
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Create specialized agents
+    researcher := chatagent.New(client,
+        chatagent.WithName("Researcher"),
+        chatagent.WithInstructions("You research topics thoroughly and provide detailed information."),
+    )
+
+    writer := chatagent.New(client,
+        chatagent.WithName("Writer"),
+        chatagent.WithInstructions("You write clear, engaging content based on provided information."),
+    )
+
+    // Convert agents to tools with context forwarding
+    tools := []tool.Tool{
+        chatagent.AsTool(researcher, chatagent.AsToolOptions{
+            Name:                  "research",
+            Description:           "Research a topic in depth",
+            ForwardRuntimeContext: true,
+        }),
+        chatagent.AsTool(writer, chatagent.AsToolOptions{
+            Name:                  "write",
+            Description:           "Write content based on research",
+            ForwardRuntimeContext: true,
+        }),
+    }
+
+    // Create orchestrator that delegates to specialized agents
+    orchestrator := chatagent.New(client,
+        chatagent.WithName("Orchestrator"),
+        chatagent.WithInstructions(`You coordinate complex tasks by delegating to:
+- research: for gathering information on topics
+- write: for creating polished content`),
+        chatagent.WithTools(tools...),
+    )
+
+    // Run with runtime context that propagates to all sub-agents
+    rtc := agent.NewRuntimeContext().
+        With("user_id", "u123").
+        With("request_id", "req_abc")
+
+    ctx = agent.WithRuntimeCtx(ctx, rtc)
+
+    response, err := orchestrator.Run(ctx, "Research quantum computing and write a summary.")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println(response.Text())
+}
+```
+
+See the [chatagent package documentation](./chatagent/doc.go) for complete AsTool options including streaming callbacks and custom key exclusion.
+
 ## Using Chat Clients Directly
 
 Use chat clients directly without the agent abstraction:

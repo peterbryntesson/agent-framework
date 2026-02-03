@@ -10,11 +10,12 @@ type RunOption func(*RunConfig)
 // RunConfig holds the configuration for an agent run.
 // This type is exported for use by agent implementations.
 type RunConfig struct {
-	Session     Session
-	Metadata    map[string]interface{}
-	Tools       []interface{}
-	MaxTokens   int
-	Temperature float32
+	Session        Session
+	Metadata       map[string]interface{}
+	Tools          []interface{}
+	MaxTokens      int
+	Temperature    float32
+	RuntimeContext *RuntimeContext
 }
 
 // ApplyRunOptions applies all options to a default configuration and returns the result.
@@ -85,5 +86,27 @@ func WithRunConfig(config *RunConfig) RunOption {
 		for k, v := range config.Metadata {
 			cfg.Metadata[k] = v
 		}
+		if config.RuntimeContext != nil {
+			cfg.RuntimeContext = config.RuntimeContext
+		}
+	}
+}
+
+// WithRuntimeContext attaches a RuntimeContext to the run configuration.
+// Use this to propagate context (user IDs, API tokens, session data) to sub-agents.
+func WithRuntimeContext(rtc *RuntimeContext) RunOption {
+	return func(cfg *RunConfig) {
+		cfg.RuntimeContext = rtc
+	}
+}
+
+// WithRuntimeValue adds a single key-value pair to the RuntimeContext.
+// If no RuntimeContext exists, creates a new one.
+func WithRuntimeValue(key string, value interface{}) RunOption {
+	return func(cfg *RunConfig) {
+		if cfg.RuntimeContext == nil {
+			cfg.RuntimeContext = NewRuntimeContext()
+		}
+		cfg.RuntimeContext = cfg.RuntimeContext.With(key, value)
 	}
 }
