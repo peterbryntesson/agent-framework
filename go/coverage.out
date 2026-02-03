@@ -299,7 +299,7 @@ github.com/microsoft/agent-framework-go/providers/openai/responses_options.go:34
 github.com/microsoft/agent-framework-go/providers/openai/responses_options.go:35.20,37.3 1 1
 github.com/microsoft/agent-framework-go/providers/openai/responses_options.go:38.2,38.52 1 1
 github.com/microsoft/agent-framework-go/providers/openai/responses_options.go:38.52,39.52 1 1
-github.com/microsoft/agent-framework-go/providers/openai/responses_options.go:39.52,41.4 1 1
+github.com/microsoft/agent-framework-go/providers/openai/responses_options.go:39.52,41.4 1 0
 github.com/microsoft/agent-framework-go/providers/openai/responses_options.go:43.2,43.19 1 1
 github.com/microsoft/agent-framework-go/providers/openai/responses_options.go:43.19,45.3 1 1
 github.com/microsoft/agent-framework-go/providers/openai/responses_options.go:53.54,54.34 1 1

@@ -29,8 +29,27 @@ Implementation of Epic 2 for the Go SDK port, covering LLM provider implementati
 * go/tool/config_test.go - Comprehensive tests for InvocationConfig including defaults, builder methods (With*), Merge, and Validate functions (15 tests)
 * go/tool/result_test.go - Comprehensive tests for Result struct including constructors, String(), JSON serialization, WithMetadata, and GetMetadata (16 tests)
 * go/tool/errors_test.go - Comprehensive tests for error types including sentinel errors, InvocationError, InvocationPanicError, UnknownToolError, and ArgumentError with proper error wrapping support (12 tests)
+* go/providers/openai/doc.go - Package documentation for the OpenAI provider explaining client creation, configuration options, basic usage, streaming, tool calling, Responses API, error handling, and observability
+* go/providers/openai/options.go - Configuration options using functional options pattern (WithAPIKey, WithModel, WithBaseURL, WithOrgID, WithInstructionRole, WithHTTPClient) with environment variable fallbacks
+* go/providers/openai/client.go - OpenAI Client struct implementing chat.Client interface with GetResponse, GetStreamingResponse, and Metadata methods; includes request building, streaming processing, and convenience constructors (NewClientWithHTTPClient, NewClientWithTimeout)
+* go/providers/openai/convert.go - Message conversion utilities for transforming between chat.Message and OpenAI format; handles text content, image content, tool calls, tool results, and finish reasons
+* go/providers/openai/stream.go - Stream processing utilities including StreamProcessor for managing tool call accumulation during streaming, ProcessStream for handling OpenAI stream chunks, and CollectStreamToResponse for assembling complete responses from stream updates (9 tests in stream_test.go)
+* go/providers/openai/tools.go - Tool conversion utilities for tool.Tool to OpenAI format transformation; includes ConvertToolsToOpenAI (function tools), ConvertHostedToolsToOpenAI (hosted tool configs), HasHostedTools, SeparateTools, ToolChoiceForOpenAI, and ParallelToolCallsOption helpers
+* go/providers/openai/tools_test.go - Comprehensive tests for tool conversion utilities covering function tools, hosted tools, tool separation, tool choice conversion, and configuration helpers (17 tests)
+* go/providers/openai/responses_options.go - Functional options pattern for ResponsesClient configuration including ResponsesWithAPIKey, ResponsesWithModel, ResponsesWithBaseURL, ResponsesWithOrgID, ResponsesWithInstructionRole, ResponsesWithHTTPClient, and ResponsesWithInstructions options
+* go/providers/openai/responses.go - ResponsesClient implementing chat.Client interface for OpenAI's stateful Responses API; includes custom HTTP client (go-openai library doesn't support Responses API), conversation continuation via previous_response_id, hosted tool support (web_search, code_interpreter, file_search, computer_use, mcp, image_generation), and streaming response handling
+* go/providers/openai/responses_test.go - Comprehensive tests for ResponsesClient covering client creation, option application, metadata, response ID management, GetResponse, GetResponseWithTools, conversation continuation, API errors, streaming, request building, message conversion, and role conversion (22 test cases)
+* go/providers/openai/client_test.go - Comprehensive unit tests for Client covering creation with options, environment variables, GetResponse with mock servers, GetResponseWithTools, GetStreamingResponse, GetStreamingResponseWithTools, tool choice handling, and interface compliance (35 test cases)
+* go/providers/openai/convert_test.go - Comprehensive tests for message conversion utilities covering toOpenAIMessages, toOpenAIMessage, extractTextContent, toOpenAIContentParts, toOpenAIToolCalls, toOpenAITools, fromOpenAIMessage, fromOpenAIToolCalls, fromOpenAIFinishReason, and round-trip conversion (25 test cases)
+* go/providers/openai/options_test.go - Unit tests for configuration options including defaultConfig, applyEnvDefaults, WithAPIKey, WithModel, WithBaseURL, WithOrgID, WithInstructionRole, WithHTTPClient, and chained application (11 test cases)
+* go/providers/openai/responses_options_test.go - Unit tests for ResponsesClient configuration options including defaultResponsesConfig, applyEnvDefaults, all ResponsesWith* option functions, and chained application (16 test cases)
+* go/providers/openai/integration_test.go - Integration tests with //go:build integration tag for real API testing; covers Client.GetResponse, Client.GetStreamingResponse, ResponsesClient.GetResponse, conversation continuation, different models; requires OPENAI_API_KEY environment variable (15 test cases)
 
 ### Modified
+
+* go/go.mod - Added github.com/sashabaranov/go-openai v1.41.2 dependency for OpenAI API client
+* go/providers/openai/client.go - Added tool package import and GetResponseWithTools/GetStreamingResponseWithTools convenience methods for tool.Tool interface integration
+* go/go.sum - Updated with go-openai dependency checksums
 
 ### Removed
 
@@ -38,7 +57,53 @@ Implementation of Epic 2 for the Go SDK port, covering LLM provider implementati
 
 * Extended InvocationConfig beyond the minimal specification to include ReturnIntermediateSteps, TimeoutSeconds, and ParallelToolCalls fields for feature parity with advanced provider capabilities
   * These fields support common use cases like debugging agent interactions, enforcing time limits, and controlling execution parallelism
-
-## Release Summary
+* Implemented streaming response handling in Step 2.2.1 rather than deferring to Step 2.2.3 because the Client interface requires GetStreamingResponse
+  * This deviation ensures the chat.Client interface is fully satisfied from the initial implementation
+* Implemented basic tool conversion in Step 2.2.1 rather than deferring to Step 2.2.4 because buildRequest needs tool support for Options.Tools
+  * This keeps the request building logic cohesive and avoids placeholder implementations
+* Step 2.2.2 (Chat Completions API integration) marked complete as all functionality was already implemented in Step 2.2.1
+  * GetResponse method with full message conversion and error handling
+  * Message conversion utilities (toOpenAIMessages, toOpenAIMessage, toOpenAIContentParts, toOpenAIToolCalls, fromOpenAIMessage, fromOpenAIToolCalls, fromOpenAIFinishReason)
+  * Usage details correctly populated from API response
+  * Verified with go build and go vet
+* Step 2.2.3 (Streaming response handling) formalized with dedicated stream.go file
+  * Created StreamProcessor struct for managing streaming state and tool call accumulation
+  * Implemented ProcessStream function to handle OpenAI stream chunks with proper context cancellation
+  * Added CollectStreamToResponse utility for converting stream updates to complete Response
+  * Refactored client.go to use ProcessStream function (removed 85 lines of inline streaming logic)
+  * Added 9 comprehensive stream_test.go tests covering text content, tool calls, errors, and concurrent access
+  * Verified with go build, go vet, and go test (all 9 tests pass)
+* Step 2.2.4 (Tool calling support) implemented with tool package integration
+  * Created tools.go with tool.Tool to OpenAI format conversion utilities
+  * Implemented ConvertToolsToOpenAI for function tools (filters out hosted tools)
+  * Implemented ConvertHostedToolsToOpenAI for extracting hosted tool configurations
+  * Added HasHostedTools helper to determine if Responses API is needed
+  * Added SeparateTools helper to split tools by type
+  * Added ToolChoiceForOpenAI for converting tool choice constants and specific tool names
+  * Added ParallelToolCallsOption helper for optional bool field handling
+  * Extended client.go with GetResponseWithTools and GetStreamingResponseWithTools convenience methods
+  * Added tool package import to client.go for tool.Tool and tool.HostedTool interfaces
+  * Created tools_test.go with 17 comprehensive tests covering all conversion utilities
+  * Verified with go build, go vet, and go test (all 26 tests pass)
+* Step 2.2.5 (Responses API client) implemented with custom HTTP client
+  * Created responses_options.go with functional options pattern for ResponsesClient configuration
+  * Created responses.go with ResponsesClient implementing chat.Client interface for OpenAI's Responses API
+  * Used custom HTTP client because github.com/sashabaranov/go-openai v1.41.2 does not support Responses API natively
+  * Implemented stateful conversation continuation via previous_response_id field with thread-safe access
+  * Implemented hosted tool support for web_search, code_interpreter, file_search, computer_use, mcp, and image_generation tool types
+  * Implemented GetResponse, GetResponseWithTools, GetStreamingResponse, and GetStreamingResponseWithTools methods
+  * Added ClearConversation, GetPreviousResponseID, and SetPreviousResponseID for conversation state management
+  * Created responses_test.go with 22 comprehensive test cases using httptest mock server
+  * Verified with go build, go vet, and go test (all tests pass)
+* Step 2.2.6 (Add OpenAI provider tests) implemented with comprehensive test coverage
+  * Created client_test.go with 35 test cases covering client creation, GetResponse, GetStreamingResponse, GetResponseWithTools, GetStreamingResponseWithTools, tool choice handling, interface compliance, and unmarshalParameters
+  * Created convert_test.go with 25 test cases covering message conversion, content extraction, tool call conversion, finish reason mapping, and round-trip conversion
+  * Created options_test.go with 11 test cases covering config defaults, environment variable handling, and all option functions
+  * Created responses_options_test.go with 16 test cases covering ResponsesClient configuration options and environment variable handling
+  * Created integration_test.go with build tag `//go:build integration` containing 15 integration test cases for real API testing
+  * Integration tests cover Client and ResponsesClient functionality including streaming, tool calls, and conversation continuation
+  * Achieved 86.7% code coverage for unit tests (note: 90%+ target partially limited by internal streaming code paths requiring actual OpenAI stream objects)
+  * Total test count: 113+ tests (226 test lines including subtests)
+  * Verified with go build, go vet, and go test (all tests pass)
 
 <!-- Include after final phase: total files affected, files created/modified/removed with paths and purposes, dependency and infrastructure changes, deployment notes -->
