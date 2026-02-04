@@ -18,7 +18,6 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * go/workflow/edge.go - Edge types including direct edges, conditional edges, fan-out/fan-in EdgeGroup, and SwitchEdge for case-based routing
 * go/workflow/workflow.go - Workflow struct with executor management, edge traversal, target resolution, and validation
 * go/workflow/events.go - WorkflowResult and WorkflowEvent types for workflow execution results and streaming events
-* go/workflow/runner.go - WorkflowRunner stub with RunnerOption functional options (placeholder for Phase 3 implementation)
 * go/workflow/checkpoint.go - Checkpoint struct and CheckpointStore interface (placeholder for Phase 4 implementation)
 * go/workflow/context_test.go - Unit tests for WorkflowContext including concurrent access tests
 * go/workflow/executor_test.go - Unit tests for Executor interface and implementations
@@ -26,16 +25,20 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * go/workflow/workflow_test.go - Unit tests for Workflow struct including validation and target resolution
 * go/workflow/builder.go - WorkflowBuilder fluent API with AddExecutor, AddEdge, AddConditionalEdge, AddFanOut, AddFanIn, SwitchFrom, MarkAsOutput, and Build methods
 * go/workflow/builder_test.go - Comprehensive unit tests for WorkflowBuilder (26 test cases covering fluent API, validation, and complex workflows)
+* go/workflow/runner_test.go - Comprehensive unit tests for WorkflowRunner (30+ test cases covering Run, RunStream, parallel execution, convergence, cancellation)
 
 ### Modified
+
+* go/workflow/runner.go - Full WorkflowRunner implementation with Pregel-like superstep execution, message routing, convergence detection, and event streaming via channels
+* go/workflow/workflow_test.go - Updated TestWorkflow_Run to work with actual runner implementation instead of stub
 
 ### Removed
 
 ## Additional or Deviating Changes
 
-* Created runner.go and checkpoint.go stub files with placeholder implementations
-  * Required for workflow.go to compile since Workflow.Run/RunStream reference WorkflowRunner
-  * Full implementations will be added in Phase 3 (runner) and Phase 4 (checkpointing)
+* Phase 3 implementation replaced Phase 1 stub runner.go with full implementation
+  * Phase 1 created placeholder that returned "not implemented" error
+  * Phase 3 provides complete Pregel-like execution with parallel executor processing
 
 ## Release Summary
 

@@ -500,18 +500,24 @@ func TestWorkflow_Validate(t *testing.T) {
 func TestWorkflow_Run(t *testing.T) {
 	t.Run("calls runner", func(t *testing.T) {
 		// Arrange
+		executed := false
 		wf := &Workflow{
 			startID: "a",
 			executors: map[string]Executor{
-				"a": NewExecutorFunc("a", nil),
+				"a": NewExecutorFunc("a", func(ctx context.Context, wCtx *WorkflowContext) error {
+					executed = true
+					return nil
+				}),
 			},
+			outputExecutors: map[string]bool{},
 		}
 
-		// Act - this will return error since runner is a stub
-		_, err := wf.Run(context.Background(), "test input")
+		// Act
+		result, err := wf.Run(context.Background(), "test input")
 
-		// Assert - runner stub returns error
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not implemented")
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.True(t, executed, "executor should have been executed")
 	})
 }
