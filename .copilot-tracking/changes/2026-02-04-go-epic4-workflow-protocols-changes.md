@@ -79,3 +79,5 @@ Implementing comprehensive workflow orchestration and communication protocols fo
   * chat package does not have a DataContent type
   * PartTypeFile maps to ImageContent for URL-based content, PartTypeData parts with structured data are currently not converted
 
+* go/protocol/agui/server.go - AG-UI Server HTTP implementation with SSE streaming support for agent-to-UI communication
+* go/protocol/agui/server_test.go - Comprehensive unit tests for AG-UI Server (23 test cases covering Run, RunStream, SSE streaming, connection lifecycle, message conversion)
