@@ -24,6 +24,8 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * go/workflow/executor_test.go - Unit tests for Executor interface and implementations
 * go/workflow/edge_test.go - Unit tests for Edge types including SwitchEdge evaluation
 * go/workflow/workflow_test.go - Unit tests for Workflow struct including validation and target resolution
+* go/workflow/builder.go - WorkflowBuilder fluent API with AddExecutor, AddEdge, AddConditionalEdge, AddFanOut, AddFanIn, SwitchFrom, MarkAsOutput, and Build methods
+* go/workflow/builder_test.go - Comprehensive unit tests for WorkflowBuilder (26 test cases covering fluent API, validation, and complex workflows)
 
 ### Modified
 
