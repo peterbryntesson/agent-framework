@@ -4,6 +4,7 @@ package workflow
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -452,4 +453,113 @@ func syncMapToMap(m *sync.Map) map[string]interface{} {
 		return true
 	})
 	return result
+}
+
+// SaveCheckpoint saves the current workflow state to the checkpoint store.
+// Returns the checkpoint ID or an error if the store is not configured.
+func (r *WorkflowRunner) SaveCheckpoint(
+	ctx context.Context,
+	runID string,
+	superstep int,
+	state map[string]interface{},
+	pendingMessages []WorkflowMessage,
+) (string, error) {
+	if r.options.checkpointStore == nil {
+		return "", fmt.Errorf("checkpoint store not configured")
+	}
+
+	stateJSON, err := json.Marshal(state)
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize state: %w", err)
+	}
+
+	checkpoint := &Checkpoint{
+		ID:              uuid.New().String(),
+		RunID:           runID,
+		Superstep:       superstep,
+		State:           stateJSON,
+		PendingMessages: pendingMessages,
+		CreatedAt:       time.Now(),
+	}
+
+	if err := r.options.checkpointStore.Save(ctx, checkpoint); err != nil {
+		return "", fmt.Errorf("failed to save checkpoint: %w", err)
+	}
+
+	return checkpoint.ID, nil
+}
+
+// ResumeFromCheckpoint resumes workflow execution from a saved checkpoint.
+// Returns the workflow result or an error.
+func (r *WorkflowRunner) ResumeFromCheckpoint(ctx context.Context, checkpointID string) (*WorkflowResult, error) {
+	if r.options.checkpointStore == nil {
+		return nil, fmt.Errorf("checkpoint store not configured")
+	}
+
+	checkpoint, err := r.options.checkpointStore.Load(ctx, checkpointID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load checkpoint: %w", err)
+	}
+
+	// Restore state
+	var stateMap map[string]interface{}
+	if err := json.Unmarshal(checkpoint.State, &stateMap); err != nil {
+		return nil, fmt.Errorf("failed to deserialize state: %w", err)
+	}
+
+	state := &sync.Map{}
+	for k, v := range stateMap {
+		state.Store(k, v)
+	}
+
+	// Resume execution from the saved superstep
+	messages := checkpoint.PendingMessages
+	superstep := checkpoint.Superstep
+	runID := checkpoint.RunID
+	var outputs []WorkflowMessage
+
+	executedSupersteps := 0
+	for superstep < r.options.maxSupersteps {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
+		newMessages, stepOutputs, err := r.executeSuperstep(ctx, runID, superstep, messages, state)
+		if err != nil {
+			return nil, err
+		}
+
+		executedSupersteps++
+		outputs = append(outputs, stepOutputs...)
+
+		if len(newMessages) == 0 {
+			break
+		}
+
+		messages = newMessages
+		superstep++
+	}
+
+	finalState := syncMapToMap(state)
+
+	return &WorkflowResult{
+		RunID:          runID,
+		Outputs:        outputs,
+		FinalState:     finalState,
+		SuperstepCount: executedSupersteps,
+	}, nil
+}
+
+// ResumeFromLatestCheckpoint resumes from the most recent checkpoint for a run.
+func (r *WorkflowRunner) ResumeFromLatestCheckpoint(ctx context.Context, runID string) (*WorkflowResult, error) {
+	if r.options.checkpointStore == nil {
+		return nil, fmt.Errorf("checkpoint store not configured")
+	}
+
+	checkpoint, err := r.options.checkpointStore.LoadLatest(ctx, runID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load latest checkpoint: %w", err)
+	}
+
+	return r.ResumeFromCheckpoint(ctx, checkpoint.ID)
 }

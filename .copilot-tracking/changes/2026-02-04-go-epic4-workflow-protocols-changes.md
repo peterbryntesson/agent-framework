@@ -31,6 +31,12 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 
 * go/workflow/runner.go - Full WorkflowRunner implementation with Pregel-like superstep execution, message routing, convergence detection, and event streaming via channels
 * go/workflow/workflow_test.go - Updated TestWorkflow_Run to work with actual runner implementation instead of stub
+* go/workflow/checkpoint.go - Added InMemoryCheckpointStore implementation with Save, Load, LoadLatest, Delete, List methods; removed "Phase 4" placeholder comment
+* go/workflow/runner.go - Added SaveCheckpoint, ResumeFromCheckpoint, and ResumeFromLatestCheckpoint methods for checkpoint persistence and recovery
+
+### Added
+
+* go/workflow/checkpoint_test.go - Comprehensive unit tests for checkpointing (14 test cases covering InMemoryCheckpointStore CRUD, thread-safety, WorkflowRunner checkpoint save/restore, and error cases)
 
 ### Removed
 
@@ -39,6 +45,10 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * Phase 3 implementation replaced Phase 1 stub runner.go with full implementation
   * Phase 1 created placeholder that returned "not implemented" error
   * Phase 3 provides complete Pregel-like execution with parallel executor processing
+
+* Phase 4 checkpoint.go already had Checkpoint struct and CheckpointStore interface from Phase 1
+  * Step 4.1 was already complete, only needed InMemoryCheckpointStore implementation
+  * Added runner methods for checkpoint integration
 
 ## Release Summary
 
