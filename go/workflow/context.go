@@ -34,7 +34,13 @@ type WorkflowContext struct {
 	// outbox collects messages to send to other executors
 	outbox []WorkflowMessage
 
-	// mu protects outbox modifications
+	// outputs collects yielded outputs from this executor
+	outputs []WorkflowOutputEvent
+
+	// haltRequested indicates the executor requested workflow termination
+	haltRequested bool
+
+	// mu protects outbox, outputs, and haltRequested modifications
 	mu sync.Mutex
 }
 
@@ -111,6 +117,47 @@ func (wc *WorkflowContext) Outbox() []WorkflowMessage {
 	return result
 }
 
+// YieldOutput queues an output to be emitted as a workflow event.
+// The output will be included in the WorkflowResult and streamed
+// to observers via RunStream.
+func (wc *WorkflowContext) YieldOutput(data interface{}) {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	wc.outputs = append(wc.outputs, WorkflowOutputEvent{
+		Data:      data,
+		SourceID:  wc.executorID,
+		Superstep: wc.superstep,
+	})
+}
+
+// RequestHalt requests graceful workflow termination.
+// The workflow will complete processing the current superstep and then
+// halt, rather than continuing to the next superstep. This allows
+// executors to signal early termination conditions.
+func (wc *WorkflowContext) RequestHalt() {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	wc.haltRequested = true
+}
+
+// Outputs returns the outputs yielded during execution.
+// This is used internally by the workflow runner.
+func (wc *WorkflowContext) Outputs() []WorkflowOutputEvent {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	result := make([]WorkflowOutputEvent, len(wc.outputs))
+	copy(result, wc.outputs)
+	return result
+}
+
+// HaltRequested returns true if the executor requested workflow halt.
+// This is used internally by the workflow runner.
+func (wc *WorkflowContext) HaltRequested() bool {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	return wc.haltRequested
+}
+
 // newWorkflowContext creates a new WorkflowContext for an executor.
 func newWorkflowContext(
 	ctx context.Context,
@@ -121,13 +168,15 @@ func newWorkflowContext(
 	state *sync.Map,
 ) *WorkflowContext {
 	return &WorkflowContext{
-		ctx:        ctx,
-		executorID: executorID,
-		runID:      runID,
-		superstep:  superstep,
-		messages:   messages,
-		state:      state,
-		outbox:     make([]WorkflowMessage, 0),
+		ctx:           ctx,
+		executorID:    executorID,
+		runID:         runID,
+		superstep:     superstep,
+		messages:      messages,
+		state:         state,
+		outbox:        make([]WorkflowMessage, 0),
+		outputs:       make([]WorkflowOutputEvent, 0),
+		haltRequested: false,
 	}
 }
 

@@ -44,6 +44,9 @@ const (
 	// EventKindOutput indicates output from an output executor
 	EventKindOutput
 
+	// EventKindYieldOutput indicates an executor yielded output via YieldOutput()
+	EventKindYieldOutput
+
 	// EventKindCompleted indicates workflow execution completed
 	EventKindCompleted
 
@@ -68,6 +71,9 @@ type WorkflowEvent struct {
 	// Message is the relevant message (if applicable)
 	Message *WorkflowMessage
 
+	// Output is the yielded output (for yield output events)
+	Output *WorkflowOutputEvent
+
 	// Error is the error (for error events)
 	Error error
 
@@ -76,4 +82,17 @@ type WorkflowEvent struct {
 
 	// Timestamp is when the event occurred
 	Timestamp time.Time
+}
+
+// WorkflowOutputEvent represents output yielded by an executor.
+// This is created when an executor calls YieldOutput() on WorkflowContext.
+type WorkflowOutputEvent struct {
+	// Data contains the output payload
+	Data interface{}
+
+	// SourceID is the executor that yielded this output
+	SourceID string
+
+	// Superstep is when this output was yielded
+	Superstep int
 }

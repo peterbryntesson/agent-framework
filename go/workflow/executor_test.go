@@ -100,6 +100,66 @@ func TestExecutorBase(t *testing.T) {
 		assert.Equal(t, "custom", custom.ID())
 		assert.Equal(t, 42, custom.value)
 	})
+
+	t.Run("has default options", func(t *testing.T) {
+		// Arrange
+		base := NewExecutorBase("test")
+
+		// Act
+		opts := base.Options()
+
+		// Assert
+		assert.True(t, opts.AutoSendResult, "AutoSendResult should default to true")
+		assert.True(t, opts.AutoYieldResult, "AutoYieldResult should default to true")
+	})
+
+	t.Run("options can be customized", func(t *testing.T) {
+		// Arrange
+		base := NewExecutorBase("test",
+			WithAutoSend(false),
+			WithAutoYield(false),
+		)
+
+		// Act
+		opts := base.Options()
+
+		// Assert
+		assert.False(t, opts.AutoSendResult, "AutoSendResult should be false")
+		assert.False(t, opts.AutoYieldResult, "AutoYieldResult should be false")
+	})
+}
+
+func TestDefaultExecutorOptions(t *testing.T) {
+	// Act
+	opts := DefaultExecutorOptions()
+
+	// Assert
+	assert.True(t, opts.AutoSendResult, "expected AutoSendResult to be true by default")
+	assert.True(t, opts.AutoYieldResult, "expected AutoYieldResult to be true by default")
+}
+
+func TestExecutorBaseWithOptions(t *testing.T) {
+	// Arrange & Act
+	eb := NewExecutorBase("test",
+		WithAutoSend(false),
+		WithAutoYield(false),
+	)
+
+	// Assert
+	assert.Equal(t, "test", eb.ID())
+	opts := eb.Options()
+	assert.False(t, opts.AutoSendResult, "expected AutoSendResult to be false")
+	assert.False(t, opts.AutoYieldResult, "expected AutoYieldResult to be false")
+}
+
+func TestExecutorBaseDefaultOptions(t *testing.T) {
+	// Arrange & Act
+	eb := NewExecutorBase("test")
+	opts := eb.Options()
+
+	// Assert
+	assert.True(t, opts.AutoSendResult, "expected AutoSendResult to be true by default")
+	assert.True(t, opts.AutoYieldResult, "expected AutoYieldResult to be true by default")
 }
 
 // testExecutor implements Executor for testing

@@ -154,3 +154,116 @@ func getMessageText(msg agent.Message) string {
 	}
 	return ""
 }
+
+func TestWorkflowContext_YieldOutput(t *testing.T) {
+	t.Run("yields outputs correctly", func(t *testing.T) {
+		// Arrange
+		ctx := NewWorkflowContextForTest(
+			context.Background(),
+			"exec-1",
+			"run-1",
+			3,
+			nil,
+			nil,
+		)
+
+		// Act
+		ctx.YieldOutput("output-1")
+		ctx.YieldOutput("output-2")
+
+		// Assert
+		outputs := ctx.Outputs()
+		require.Len(t, outputs, 2)
+
+		assert.Equal(t, "output-1", outputs[0].Data)
+		assert.Equal(t, "exec-1", outputs[0].SourceID)
+		assert.Equal(t, 3, outputs[0].Superstep)
+
+		assert.Equal(t, "output-2", outputs[1].Data)
+	})
+
+	t.Run("outputs returns copy", func(t *testing.T) {
+		// Arrange
+		ctx := NewWorkflowContextForTest(
+			context.Background(),
+			"exec-1",
+			"run-1",
+			0,
+			nil,
+			nil,
+		)
+
+		ctx.YieldOutput("output-1")
+		outputs1 := ctx.Outputs()
+
+		ctx.YieldOutput("output-2")
+		outputs2 := ctx.Outputs()
+
+		// Assert - outputs1 should not be modified when outputs2 is created
+		assert.Len(t, outputs1, 1, "outputs1 should still have 1 element")
+		assert.Len(t, outputs2, 2, "outputs2 should have 2 elements")
+	})
+}
+
+func TestWorkflowContext_RequestHalt(t *testing.T) {
+	t.Run("halt not requested initially", func(t *testing.T) {
+		// Arrange
+		ctx := NewWorkflowContextForTest(
+			context.Background(),
+			"exec-1",
+			"run-1",
+			0,
+			nil,
+			nil,
+		)
+
+		// Assert
+		assert.False(t, ctx.HaltRequested(), "halt should not be requested initially")
+	})
+
+	t.Run("halt requested after RequestHalt", func(t *testing.T) {
+		// Arrange
+		ctx := NewWorkflowContextForTest(
+			context.Background(),
+			"exec-1",
+			"run-1",
+			0,
+			nil,
+			nil,
+		)
+
+		// Act
+		ctx.RequestHalt()
+
+		// Assert
+		assert.True(t, ctx.HaltRequested(), "halt should be requested after RequestHalt")
+	})
+}
+
+func TestWorkflowContext_ConcurrentOutputsAndHalt(t *testing.T) {
+	t.Run("concurrent yield outputs are safe", func(t *testing.T) {
+		// Arrange
+		ctx := NewWorkflowContextForTest(
+			context.Background(),
+			"exec-1",
+			"run-1",
+			0,
+			nil,
+			nil,
+		)
+
+		// Act
+		var wg sync.WaitGroup
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				ctx.YieldOutput(idx)
+			}(i)
+		}
+		wg.Wait()
+
+		// Assert
+		assert.Len(t, ctx.Outputs(), 100)
+	})
+}

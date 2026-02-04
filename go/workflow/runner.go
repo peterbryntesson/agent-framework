@@ -103,13 +103,18 @@ func (r *WorkflowRunner) Run(ctx context.Context, input string) (*WorkflowResult
 		}
 
 		// Execute superstep
-		newMessages, stepOutputs, err := r.executeSuperstep(ctx, runID, superstep, messages, state)
+		newMessages, stepOutputs, haltRequested, err := r.executeSuperstep(ctx, runID, superstep, messages, state)
 		if err != nil {
 			return nil, err
 		}
 
 		executedSupersteps++
 		outputs = append(outputs, stepOutputs...)
+
+		// Check for halt request
+		if haltRequested {
+			break
+		}
 
 		// Check for convergence (no new messages)
 		if len(newMessages) == 0 {
@@ -183,7 +188,7 @@ func (r *WorkflowRunner) RunStream(ctx context.Context, input string) (<-chan Wo
 				Timestamp: time.Now(),
 			}
 
-			newMessages, stepOutputs, err := r.executeSuperstepWithEvents(ctx, runID, superstep, messages, state, events)
+			newMessages, stepOutputs, haltRequested, err := r.executeSuperstepWithEvents(ctx, runID, superstep, messages, state, events)
 			if err != nil {
 				events <- WorkflowEvent{
 					Kind:      EventKindError,
@@ -214,6 +219,11 @@ func (r *WorkflowRunner) RunStream(ctx context.Context, input string) (<-chan Wo
 				RunID:     runID,
 				Superstep: superstep,
 				Timestamp: time.Now(),
+			}
+
+			// Check for halt request
+			if haltRequested {
+				break
 			}
 
 			// Check for convergence
@@ -253,15 +263,23 @@ func newInputMessage(input string) agent.Message {
 	return agent.NewUserMessage(input)
 }
 
+// getExecutorOptions retrieves options from an executor if available.
+func getExecutorOptions(exec Executor) ExecutorOptions {
+	if op, ok := exec.(OptionsProvider); ok {
+		return op.Options()
+	}
+	return DefaultExecutorOptions()
+}
+
 // executeSuperstep executes one superstep of the workflow.
-// Returns new messages for the next superstep and any outputs.
+// Returns new messages for the next superstep, any outputs, halt status, and an error.
 func (r *WorkflowRunner) executeSuperstep(
 	ctx context.Context,
 	runID string,
 	superstep int,
 	messages []WorkflowMessage,
 	state *sync.Map,
-) ([]WorkflowMessage, []WorkflowMessage, error) {
+) ([]WorkflowMessage, []WorkflowMessage, bool, error) {
 	// Group messages by target executor
 	messagesByExecutor := make(map[string][]WorkflowMessage)
 	for _, msg := range messages {
@@ -274,11 +292,12 @@ func (r *WorkflowRunner) executeSuperstep(
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	var execErr error
+	haltRequested := false
 
 	for executorID, execMessages := range messagesByExecutor {
 		executor, ok := r.workflow.GetExecutor(executorID)
 		if !ok {
-			return nil, nil, fmt.Errorf("executor %q not found", executorID)
+			return nil, nil, false, fmt.Errorf("executor %q not found", executorID)
 		}
 
 		wg.Add(1)
@@ -296,6 +315,13 @@ func (r *WorkflowRunner) executeSuperstep(
 				return
 			}
 
+			// Check if halt was requested
+			if wCtx.HaltRequested() {
+				mu.Lock()
+				haltRequested = true
+				mu.Unlock()
+			}
+
 			newMsgs, stepOutputs := r.routeMessages(exec.ID(), wCtx.Outbox(), superstep, state)
 
 			mu.Lock()
@@ -308,10 +334,10 @@ func (r *WorkflowRunner) executeSuperstep(
 	wg.Wait()
 
 	if execErr != nil {
-		return nil, nil, execErr
+		return nil, nil, false, execErr
 	}
 
-	return allNewMessages, outputs, nil
+	return allNewMessages, outputs, haltRequested, nil
 }
 
 // executeSuperstepWithEvents executes a superstep and emits events.
@@ -322,7 +348,7 @@ func (r *WorkflowRunner) executeSuperstepWithEvents(
 	messages []WorkflowMessage,
 	state *sync.Map,
 	events chan<- WorkflowEvent,
-) ([]WorkflowMessage, []WorkflowMessage, error) {
+) ([]WorkflowMessage, []WorkflowMessage, bool, error) {
 	// Group messages by target executor
 	messagesByExecutor := make(map[string][]WorkflowMessage)
 	for _, msg := range messages {
@@ -335,11 +361,12 @@ func (r *WorkflowRunner) executeSuperstepWithEvents(
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	var execErr error
+	haltRequested := false
 
 	for executorID, execMessages := range messagesByExecutor {
 		executor, ok := r.workflow.GetExecutor(executorID)
 		if !ok {
-			return nil, nil, fmt.Errorf("executor %q not found", executorID)
+			return nil, nil, false, fmt.Errorf("executor %q not found", executorID)
 		}
 
 		wg.Add(1)
@@ -383,6 +410,26 @@ func (r *WorkflowRunner) executeSuperstepWithEvents(
 				Timestamp:  time.Now(),
 			}
 
+			// Emit yield output events
+			for _, output := range wCtx.Outputs() {
+				outputCopy := output
+				events <- WorkflowEvent{
+					Kind:       EventKindYieldOutput,
+					RunID:      runID,
+					Superstep:  superstep,
+					ExecutorID: exec.ID(),
+					Output:     &outputCopy,
+					Timestamp:  time.Now(),
+				}
+			}
+
+			// Check if halt was requested
+			if wCtx.HaltRequested() {
+				mu.Lock()
+				haltRequested = true
+				mu.Unlock()
+			}
+
 			newMsgs, stepOutputs := r.routeMessages(exec.ID(), wCtx.Outbox(), superstep, state)
 
 			mu.Lock()
@@ -395,10 +442,10 @@ func (r *WorkflowRunner) executeSuperstepWithEvents(
 	wg.Wait()
 
 	if execErr != nil {
-		return nil, nil, execErr
+		return nil, nil, false, execErr
 	}
 
-	return allNewMessages, outputs, nil
+	return allNewMessages, outputs, haltRequested, nil
 }
 
 // routeMessages routes outbox messages to their targets based on edges.
@@ -524,13 +571,17 @@ func (r *WorkflowRunner) ResumeFromCheckpoint(ctx context.Context, checkpointID 
 			return nil, err
 		}
 
-		newMessages, stepOutputs, err := r.executeSuperstep(ctx, runID, superstep, messages, state)
+		newMessages, stepOutputs, haltRequested, err := r.executeSuperstep(ctx, runID, superstep, messages, state)
 		if err != nil {
 			return nil, err
 		}
 
 		executedSupersteps++
 		outputs = append(outputs, stepOutputs...)
+
+		if haltRequested {
+			break
+		}
 
 		if len(newMessages) == 0 {
 			break
