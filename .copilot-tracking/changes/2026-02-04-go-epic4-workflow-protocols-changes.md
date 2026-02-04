@@ -53,12 +53,9 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * go/protocol/a2a/session.go - A2ASession implementing agent.Session for maintaining A2A context ID and task ID across interactions
 * go/protocol/a2a/agent_test.go - Comprehensive unit tests for A2AAgent (16 test cases covering agent creation, Run, RunStream, session management, and message conversion)
 * go/protocol/a2a/session_test.go - Comprehensive unit tests for A2ASession (18 test cases covering session creation, serialization, thread-safety, and service registration)
-
-### Modified
-
-* go/workflow/context.go - Added NewWorkflowContextForTest helper for external package testing
-* go/protocol/a2a/server.go - A2A Server HTTP implementation exposing agent.Agent via A2A protocol with AgentCard, Task management, SendMessage, SendMessageStream SSE streaming, and CancelTask endpoints
-* go/protocol/a2a/server_test.go - Comprehensive unit tests for A2A Server (45+ test cases covering all endpoints, message conversion, session management, streaming, and integration flows)
+* go/protocol/agui/doc.go - Package documentation for AG-UI protocol with event types overview and usage examples
+* go/protocol/agui/events.go - AG-UI event types implementing Event interface with 12 event types (RunStarted, RunFinished, RunError, TextMessageStart/Content/End, ToolCallStart/Args/End/Result, StateSnapshot, StateDelta)
+* go/protocol/agui/events_test.go - Comprehensive unit tests for AG-UI events (40 test cases covering event creation, JSON marshaling, interface compliance)
 
 ### Removed
 
