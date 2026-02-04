@@ -273,21 +273,21 @@ Implement comprehensive workflow orchestration and communication protocols for t
   * Run AG-UI server tests
   * Verify SSE streaming works correctly
 
-### [ ] Implementation Phase 13: Group Chat Core
+### [x] Implementation Phase 13: Group Chat Core
 
 <!-- parallelizable: false -->
 
-* [ ] Step 13.1: Create workflow/groupchat package structure
+* [x] Step 13.1: Create workflow/groupchat package structure
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 6470-6530)
-* [ ] Step 13.2: Define Selector interface
+* [x] Step 13.2: Define Selector interface
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 6532-6610)
-* [ ] Step 13.3: Define Transcript and TranscriptEntry types
+* [x] Step 13.3: Define Transcript and TranscriptEntry types
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 6612-6700)
-* [ ] Step 13.4: Define GroupChatEvent types
+* [x] Step 13.4: Define GroupChatEvent types
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 6702-6780)
-* [ ] Step 13.5: Write unit tests for group chat types
+* [x] Step 13.5: Write unit tests for group chat types
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 6782-6850)
-* [ ] Step 13.6: Validate Phase 13 changes
+* [x] Step 13.6: Validate Phase 13 changes
   * Run group chat type tests
 
 ### [ ] Implementation Phase 14: Built-in Selectors

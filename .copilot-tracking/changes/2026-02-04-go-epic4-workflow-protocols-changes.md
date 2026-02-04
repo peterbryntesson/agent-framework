@@ -81,3 +81,34 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 
 * go/protocol/agui/server.go - AG-UI Server HTTP implementation with SSE streaming support for agent-to-UI communication
 * go/protocol/agui/server_test.go - Comprehensive unit tests for AG-UI Server (23 test cases covering Run, RunStream, SSE streaming, connection lifecycle, message conversion)
+* go/workflow/groupchat/doc.go - Package documentation for groupchat multi-agent conversation orchestration
+* go/workflow/groupchat/selector.go - Selector interface, SelectorFunc wrapper, TerminationCondition type, and helper functions (MaxTurnsCondition, KeywordCondition, CombineConditions, AllConditions)
+* go/workflow/groupchat/transcript.go - Transcript and TranscriptEntry types for recording group chat conversation history with speaker attribution, timing, and query methods
+* go/workflow/groupchat/events.go - Event and EventKind types for group chat execution lifecycle (Started, TurnStarted, SpeakerSelected, AgentInvoked, AgentResponse, AgentResponseUpdate, TurnCompleted, Terminating, Completed, Error), plus Result type
+* go/workflow/groupchat/selector_test.go - Comprehensive unit tests for Selector (17 test cases covering SelectorFunc, termination conditions, keyword matching)
+* go/workflow/groupchat/transcript_test.go - Comprehensive unit tests for Transcript (18 test cases covering entry management, queries, cloning, completion tracking)
+* go/workflow/groupchat/events_test.go - Comprehensive unit tests for Event types (14 test cases covering event creation, EventKind string conversion, Result.IsSuccess)
+
+### Removed
+
+## Additional or Deviating Changes
+
+* Phase 3 implementation replaced Phase 1 stub runner.go with full implementation
+  * Phase 1 created placeholder that returned "not implemented" error
+  * Phase 3 provides complete Pregel-like execution with parallel executor processing
+
+* Phase 4 checkpoint.go already had Checkpoint struct and CheckpointStore interface from Phase 1
+  * Step 4.1 was already complete, only needed InMemoryCheckpointStore implementation
+  * Added runner methods for checkpoint integration
+
+* Phase 8 session storage uses wrapper struct instead of raw slice
+  * Go slices are not comparable, preventing use of sync.Map.CompareAndSwap
+  * Added sessionTasks wrapper struct with mutex protection for thread-safe task ID management
+
+* Phase 9 A2AAgent uses ImageContent instead of DataContent for file/data parts
+  * chat package does not have a DataContent type
+  * PartTypeFile maps to ImageContent for URL-based content, PartTypeData parts with structured data are currently not converted
+
+* Phase 13 selector.go uses Message.Text() method for keyword extraction
+  * Initially attempted interface type assertion for Text() method
+  * chat.TextContent has Text field, not Text() method; agent.Message has Text() method that concatenates all text content
