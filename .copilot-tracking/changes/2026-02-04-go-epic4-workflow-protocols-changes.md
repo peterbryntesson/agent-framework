@@ -49,6 +49,10 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * go/protocol/a2a/types_test.go - Comprehensive unit tests for A2A type serialization (17 test cases covering JSON round-tripping for all types)
 * go/protocol/a2a/client.go - A2A Client HTTP implementation with functional options, GetAgentCard, CreateTask, GetTask, SendMessage, SendMessageStream with SSE parsing, and CancelTask methods
 * go/protocol/a2a/client_test.go - Comprehensive unit tests for A2A Client (24 test cases covering all client methods, SSE parsing, error handling, and context cancellation)
+* go/protocol/a2a/agent.go - A2AAgent wrapper implementing agent.Agent interface using A2A Client for remote agent access with Run and RunStream methods
+* go/protocol/a2a/session.go - A2ASession implementing agent.Session for maintaining A2A context ID and task ID across interactions
+* go/protocol/a2a/agent_test.go - Comprehensive unit tests for A2AAgent (16 test cases covering agent creation, Run, RunStream, session management, and message conversion)
+* go/protocol/a2a/session_test.go - Comprehensive unit tests for A2ASession (18 test cases covering session creation, serialization, thread-safety, and service registration)
 
 ### Modified
 
@@ -72,5 +76,7 @@ Implementing comprehensive workflow orchestration and communication protocols fo
   * Go slices are not comparable, preventing use of sync.Map.CompareAndSwap
   * Added sessionTasks wrapper struct with mutex protection for thread-safe task ID management
 
-## Release Summary
+* Phase 9 A2AAgent uses ImageContent instead of DataContent for file/data parts
+  * chat package does not have a DataContent type
+  * PartTypeFile maps to ImageContent for URL-based content, PartTypeData parts with structured data are currently not converted
 
