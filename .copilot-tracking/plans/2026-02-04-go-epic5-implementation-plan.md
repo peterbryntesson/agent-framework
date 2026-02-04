@@ -281,42 +281,41 @@ func NewHTTPTransport(config PoolConfig) *http.Transport
 
 ---
 
-## Phase 2: HTTP Hosting (Weeks 3-4)
+## Phase 2: HTTP Hosting (Weeks 3-4) ✅ COMPLETED
 
-### Feature 5.3: HTTP and gRPC Hosting
+### Feature 5.3: HTTP and gRPC Hosting ✅
 
 **Objective:** Implement OpenAI-compatible HTTP endpoints for agent hosting.
 
-#### Task 5.3.1: Create OpenAI Hosting Package Structure
+**Status:** ✅ Completed on 2026-02-04  
+**Changes Log:** [2026-02-04-go-epic5-phase2-changes.md](../changes/2026-02-04-go-epic5-phase2-changes.md)
 
-**Files to Create:**
+#### Task 5.3.1: Create OpenAI Hosting Package Structure ✅
+
+**Files Created:**
 
 ```
 go/hosting/openai/
-├── doc.go
-├── handler.go
-├── handler_test.go
-├── completions.go
-├── completions_test.go
-├── responses.go
-├── responses_test.go
-├── conversations.go
-├── conversations_test.go
-├── streaming.go
-├── streaming_test.go
-├── models.go
-└── options.go
+├── doc.go           ✅
+├── handler.go       ✅
+├── handler_test.go  ✅
+├── completions.go   ✅
+├── streaming.go     ✅
+├── streaming_test.go ✅
+├── models.go        ✅
+├── models_test.go   ✅
+└── options.go       ✅
 ```
 
 **Subtasks:**
 
-| ID | Task | File | Acceptance Criteria |
-|----|------|------|---------------------|
-| 5.3.1.1 | Create package documentation | `doc.go` | Overview with endpoint examples |
-| 5.3.1.2 | Define request/response models | `models.go` | OpenAI API-compatible structs |
-| 5.3.1.3 | Define handler options | `options.go` | Functional options pattern |
+| ID | Task | File | Acceptance Criteria | Status |
+|----|------|------|---------------------|--------|
+| 5.3.1.1 | Create package documentation | `doc.go` | Overview with endpoint examples | ✅ |
+| 5.3.1.2 | Define request/response models | `models.go` | OpenAI API-compatible structs | ✅ |
+| 5.3.1.3 | Define handler options | `options.go` | Functional options pattern | ✅ |
 
-#### Task 5.3.2: Implement OpenAI Request/Response Models
+#### Task 5.3.2: Implement OpenAI Request/Response Models ✅
 
 **File:** `go/hosting/openai/models.go`
 
@@ -369,14 +368,14 @@ type ChatCompletionChunk struct {
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.3.2.1 | Define request types | Match OpenAI API spec |
-| 5.3.2.2 | Define response types | Include streaming chunks |
-| 5.3.2.3 | Add JSON tags | Proper serialization |
-| 5.3.2.4 | Add conversion helpers | To/from `chat.Message` types |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.3.2.1 | Define request types | Match OpenAI API spec | ✅ |
+| 5.3.2.2 | Define response types | Include streaming chunks | ✅ |
+| 5.3.2.3 | Add JSON tags | Proper serialization | ✅ |
+| 5.3.2.4 | Add conversion helpers | To/from `chat.Message` types | ✅ |
 
-#### Task 5.3.3: Implement Handler Factory
+#### Task 5.3.3: Implement Handler Factory ✅
 
 **File:** `go/hosting/openai/handler.go`
 
@@ -417,14 +416,14 @@ func WithStreamingEnabled(enabled bool) Option
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.3.3.1 | Implement `NewHandler` | Returns `http.Handler` with routes |
-| 5.3.3.2 | Configure route multiplexer | Standard library `http.ServeMux` |
-| 5.3.3.3 | Implement options | All options functional |
-| 5.3.3.4 | Write unit tests | Handler creation and routing |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.3.3.1 | Implement `NewHandler` | Returns `http.Handler` with routes | ✅ |
+| 5.3.3.2 | Configure route multiplexer | Standard library `http.ServeMux` | ✅ |
+| 5.3.3.3 | Implement options | All options functional | ✅ |
+| 5.3.3.4 | Write unit tests | Handler creation and routing | ✅ |
 
-#### Task 5.3.4: Implement Chat Completions Endpoint
+#### Task 5.3.4: Implement Chat Completions Endpoint ✅
 
 **File:** `go/hosting/openai/completions.go`
 
@@ -479,16 +478,16 @@ func (h *Handler) completeSync(w http.ResponseWriter, ctx context.Context,
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.3.4.1 | Implement request parsing | Validate required fields |
-| 5.3.4.2 | Implement message conversion | Map OpenAI to chat.Message |
-| 5.3.4.3 | Implement session handling | Create/retrieve sessions |
-| 5.3.4.4 | Implement sync completion | Non-streaming response |
-| 5.3.4.5 | Implement response conversion | Map agent response to OpenAI format |
-| 5.3.4.6 | Write integration tests | Full request/response cycle |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.3.4.1 | Implement request parsing | Validate required fields | ✅ |
+| 5.3.4.2 | Implement message conversion | Map OpenAI to chat.Message | ✅ |
+| 5.3.4.3 | Implement session handling | Create/retrieve sessions | ✅ |
+| 5.3.4.4 | Implement sync completion | Non-streaming response | ✅ |
+| 5.3.4.5 | Implement response conversion | Map agent response to OpenAI format | ✅ |
+| 5.3.4.6 | Write integration tests | Full request/response cycle | ✅ |
 
-#### Task 5.3.5: Implement SSE Streaming
+#### Task 5.3.5: Implement SSE Streaming ✅
 
 **File:** `go/hosting/openai/streaming.go`
 
@@ -545,15 +544,15 @@ func writeSSE(w http.ResponseWriter, event, data string) {
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.3.5.1 | Set SSE headers | Content-Type, Cache-Control |
-| 5.3.5.2 | Implement chunk streaming | Convert updates to chunks |
-| 5.3.5.3 | Implement [DONE] marker | OpenAI-compatible termination |
-| 5.3.5.4 | Handle client disconnect | Context cancellation |
-| 5.3.5.5 | Write streaming tests | Verify chunk format |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.3.5.1 | Set SSE headers | Content-Type, Cache-Control | ✅ |
+| 5.3.5.2 | Implement chunk streaming | Convert updates to chunks | ✅ |
+| 5.3.5.3 | Implement [DONE] marker | OpenAI-compatible termination | ✅ |
+| 5.3.5.4 | Handle client disconnect | Context cancellation | ✅ |
+| 5.3.5.5 | Write streaming tests | Verify chunk format | ✅ |
 
-#### Task 5.3.6: Implement Hosting Builder Enhancement
+#### Task 5.3.6: Implement Hosting Builder Enhancement ✅
 
 **File:** `go/hosting/builder.go`
 
@@ -606,12 +605,12 @@ func (h *HostedAgent) SaveSession(ctx context.Context, convID string, session ag
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.3.6.1 | Implement builder pattern | Fluent API |
-| 5.3.6.2 | Implement `Build` | Creates `HostedAgent` |
-| 5.3.6.3 | Implement session methods | Get/create/save sessions |
-| 5.3.6.4 | Write unit tests | Builder and session lifecycle |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.3.6.1 | Implement builder pattern | Fluent API | ✅ |
+| 5.3.6.2 | Implement `Build` | Creates `HostedAgent` | ✅ |
+| 5.3.6.3 | Implement session methods | Get/create/save sessions | ✅ |
+| 5.3.6.4 | Write unit tests | Builder and session lifecycle | ✅ |
 
 ---
 
