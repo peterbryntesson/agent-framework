@@ -185,11 +185,11 @@ func TestFileCheckpointStore_LoadLatestNoCheckpoints(t *testing.T) {
 
 func TestParseFilename(t *testing.T) {
 	tests := []struct {
-		name         string
-		filename     string
-		wantRunID    string
-		wantCpID     string
-		wantOK       bool
+		name      string
+		filename  string
+		wantRunID string
+		wantCpID  string
+		wantOK    bool
 	}{
 		{
 			name:      "valid filename",
