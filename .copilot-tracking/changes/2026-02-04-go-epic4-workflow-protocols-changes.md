@@ -120,3 +120,25 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * Phase 14 LLMSelector uses Response.Text() helper method instead of Response.Message
   * agent.Response has Messages slice (plural), not Message field
   * Response.Text() concatenates text from all messages
+
+## Phase 15: Group Chat Manager
+
+### Added
+
+* go/workflow/groupchat/manager.go - Manager struct for multi-agent group chat orchestration with Run and RunStream methods, configurable termination conditions, turn-based execution loop, and Pregel-like message accumulation in transcripts
+* go/workflow/groupchat/options.go - Functional options for Manager configuration: WithHistoryFilter, WithBeforeTurnCallback, WithAfterTurnCallback, WithSystemPrompt, WithIncludeTranscriptInMessages; plus helper functions LastNMessagesFilter, PerAgentHistoryFilter
+* go/workflow/groupchat/manager_test.go - Comprehensive unit tests for Manager (40+ test cases covering creation, Run, RunStream, callbacks, history filters, system prompt, transcript inclusion, agent lookup, concurrency, selector integration, event timestamps)
+
+### Modified
+
+### Removed
+
+## Additional or Deviating Changes
+
+* Phase 15 turnCount logic adjusted to check limit before incrementing
+  * Ensures turnCount reflects actual completed turns, not attempted turns
+  * Changed from `turnCount > maxTurns` (after increment) to `turnCount >= maxTurns` (before increment)
+
+* Phase 15 options.go created as separate file for functional options
+  * Plan details were unavailable (file has fewer lines than referenced)
+  * Options inspired by .NET GroupChatManager patterns: history filtering, callbacks, system prompts
