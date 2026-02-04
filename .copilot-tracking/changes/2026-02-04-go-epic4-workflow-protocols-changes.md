@@ -47,6 +47,8 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * go/protocol/a2a/doc.go - Package documentation for A2A protocol types with Client/Server usage examples
 * go/protocol/a2a/types.go - A2A protocol type definitions (AgentCard, Task, Message, Part, Artifact, StreamEvent, request/response types, and helper constructors)
 * go/protocol/a2a/types_test.go - Comprehensive unit tests for A2A type serialization (17 test cases covering JSON round-tripping for all types)
+* go/protocol/a2a/client.go - A2A Client HTTP implementation with functional options, GetAgentCard, CreateTask, GetTask, SendMessage, SendMessageStream with SSE parsing, and CancelTask methods
+* go/protocol/a2a/client_test.go - Comprehensive unit tests for A2A Client (24 test cases covering all client methods, SSE parsing, error handling, and context cancellation)
 
 ### Modified
 
