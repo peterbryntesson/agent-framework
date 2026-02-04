@@ -682,3 +682,352 @@ func TestA2AAgent_ConcurrentAccess(t *testing.T) {
 func TestA2AAgent_ImplementsAgent(t *testing.T) {
 	var _ agent.Agent = (*A2AAgent)(nil)
 }
+
+// TestA2AAgent_GetServiceAgentCard tests getting the AgentCard service.
+func TestA2AAgent_GetServiceAgentCard(t *testing.T) {
+	// Create server that returns agent card
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/.well-known/agent.json" {
+			card := AgentCard{
+				Name:        "Test Agent",
+				Description: "Agent for testing GetService",
+				Version:     "2.0.0",
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(card)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	a := NewA2AAgent(client)
+
+	// Before fetching, GetService returns the (nil) card pointer
+	got := a.GetService(reflect.TypeOf((*AgentCard)(nil)))
+	if got != nil {
+		// The card is nil initially - GetService returns (*AgentCard)(nil)
+		card := got.(*AgentCard)
+		if card != nil {
+			t.Error("GetService(AgentCard) before FetchAgentCard should return nil card")
+		}
+	}
+
+	// Fetch the card
+	_, err := a.FetchAgentCard(context.Background())
+	if err != nil {
+		t.Fatalf("FetchAgentCard() error = %v", err)
+	}
+
+	// After fetching, GetService should return the cached card
+	got = a.GetService(reflect.TypeOf((*AgentCard)(nil)))
+	if got == nil {
+		t.Fatal("GetService(AgentCard) after FetchAgentCard should not return nil")
+	}
+
+	card, ok := got.(*AgentCard)
+	if !ok {
+		t.Fatalf("GetService returned wrong type: %T", got)
+	}
+
+	if card == nil {
+		t.Fatal("card should not be nil after FetchAgentCard")
+	}
+
+	if card.Name != "Test Agent" {
+		t.Errorf("card.Name = %q, want %q", card.Name, "Test Agent")
+	}
+}
+
+// TestA2AAgent_ProcessStreamEventsErrors tests stream event error handling.
+func TestA2AAgent_ProcessStreamEventsErrors(t *testing.T) {
+	// Server that streams an error event
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/tasks":
+			task := Task{
+				ID:        "task-error-1",
+				ContextID: "ctx-error",
+				State:     TaskStatePending,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(task)
+
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/messages/stream"):
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Cache-Control", "no-cache")
+			flusher, ok := w.(http.Flusher)
+			if !ok {
+				http.Error(w, "SSE not supported", http.StatusInternalServerError)
+				return
+			}
+
+			// Send an error event
+			fmt.Fprintf(w, "event:error\n")
+			fmt.Fprintf(w, "data:{\"code\":\"ERR001\",\"message\":\"Test error\"}\n\n")
+			flusher.Flush()
+
+			// Send done
+			fmt.Fprintf(w, "event:done\n")
+			fmt.Fprintf(w, "data:{}\n\n")
+			flusher.Flush()
+
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	a := NewA2AAgent(client)
+
+	messages := []agent.Message{
+		chat.NewUserMessage("Test error handling"),
+	}
+
+	updates, err := a.RunStream(context.Background(), messages)
+	if err != nil {
+		t.Fatalf("RunStream() error = %v", err)
+	}
+
+	var hasError bool
+	for update := range updates {
+		if update.Kind == agent.UpdateKindError {
+			hasError = true
+		}
+	}
+
+	if !hasError {
+		t.Error("expected error update from stream")
+	}
+}
+
+// TestA2AAgent_ProcessStreamEventsTask tests stream task event handling.
+func TestA2AAgent_ProcessStreamEventsTask(t *testing.T) {
+	// Server that streams a task event
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/tasks":
+			task := Task{
+				ID:        "task-stream-task",
+				ContextID: "ctx-task",
+				State:     TaskStatePending,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(task)
+
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/messages/stream"):
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Cache-Control", "no-cache")
+			flusher, ok := w.(http.Flusher)
+			if !ok {
+				http.Error(w, "SSE not supported", http.StatusInternalServerError)
+				return
+			}
+
+			// Send a task event with assistant message
+			task := Task{
+				ID:        "task-stream-task",
+				State:     TaskStateCompleted,
+				ContextID: "ctx-task-updated",
+				Messages: []Message{
+					{Role: RoleAssistant, Parts: []Part{NewTextPart("Task response")}},
+				},
+			}
+			taskJSON, _ := json.Marshal(task)
+			fmt.Fprintf(w, "event:task\n")
+			fmt.Fprintf(w, "data:%s\n\n", taskJSON)
+			flusher.Flush()
+
+			// Send done
+			fmt.Fprintf(w, "event:done\n")
+			fmt.Fprintf(w, "data:{}\n\n")
+			flusher.Flush()
+
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	a := NewA2AAgent(client)
+
+	messages := []agent.Message{
+		chat.NewUserMessage("Test task event"),
+	}
+
+	updates, err := a.RunStream(context.Background(), messages)
+	if err != nil {
+		t.Fatalf("RunStream() error = %v", err)
+	}
+
+	var hasMessageComplete bool
+	for update := range updates {
+		if update.Kind == agent.UpdateKindMessageComplete {
+			hasMessageComplete = true
+		}
+	}
+
+	if !hasMessageComplete {
+		t.Error("expected MessageComplete update from task event")
+	}
+}
+
+// TestA2AAgent_ConvertA2AMessageWithFile tests converting messages with file parts.
+func TestA2AAgent_ConvertA2AMessageWithFile(t *testing.T) {
+	client := NewClient("http://localhost:8080")
+	a := NewA2AAgent(client)
+
+	msg := &Message{
+		Role: RoleAssistant,
+		Parts: []Part{
+			NewTextPart("Here is the file:"),
+			NewFilePart("https://example.com/file.pdf", "application/pdf"),
+		},
+	}
+
+	agentMsg := a.convertA2AMessageToAgent(msg)
+
+	if len(agentMsg.Contents) != 2 {
+		t.Fatalf("len(Contents) = %d, want 2", len(agentMsg.Contents))
+	}
+
+	// First content should be text
+	if _, ok := agentMsg.Contents[0].(*chat.TextContent); !ok {
+		t.Errorf("Contents[0] = %T, want *chat.TextContent", agentMsg.Contents[0])
+	}
+
+	// Second content should be ImageContent (used for file URLs)
+	imgContent, ok := agentMsg.Contents[1].(*chat.ImageContent)
+	if !ok {
+		t.Fatalf("Contents[1] = %T, want *chat.ImageContent", agentMsg.Contents[1])
+	}
+
+	if imgContent.URL != "https://example.com/file.pdf" {
+		t.Errorf("ImageContent.URL = %q, want %q", imgContent.URL, "https://example.com/file.pdf")
+	}
+
+	if imgContent.MediaType != "application/pdf" {
+		t.Errorf("ImageContent.MediaType = %q, want %q", imgContent.MediaType, "application/pdf")
+	}
+}
+
+// TestA2AAgent_ConvertMessagesWithImage tests converting messages with image content.
+func TestA2AAgent_ConvertMessagesWithImage(t *testing.T) {
+	client := NewClient("http://localhost:8080")
+	a := NewA2AAgent(client)
+
+	messages := []agent.Message{
+		{
+			Role: chat.RoleUser,
+			Contents: []chat.Content{
+				chat.NewTextContent("Look at this:"),
+				&chat.ImageContent{
+					URL:       "https://example.com/image.png",
+					MediaType: "image/png",
+				},
+			},
+		},
+	}
+
+	msg := a.convertMessagesToA2A(messages)
+
+	if msg == nil {
+		t.Fatal("convertMessagesToA2A returned nil")
+	}
+
+	if len(msg.Parts) != 2 {
+		t.Fatalf("len(Parts) = %d, want 2", len(msg.Parts))
+	}
+
+	// First part should be text
+	if msg.Parts[0].Type != PartTypeText {
+		t.Errorf("Parts[0].Type = %q, want %q", msg.Parts[0].Type, PartTypeText)
+	}
+
+	// Second part should be file (converted from image)
+	if msg.Parts[1].Type != PartTypeFile {
+		t.Errorf("Parts[1].Type = %q, want %q", msg.Parts[1].Type, PartTypeFile)
+	}
+
+	if msg.Parts[1].URI != "https://example.com/image.png" {
+		t.Errorf("Parts[1].URI = %q, want %q", msg.Parts[1].URI, "https://example.com/image.png")
+	}
+}
+
+// TestA2AAgent_RunStreamWithExistingSession tests streaming with an existing session.
+func TestA2AAgent_RunStreamWithExistingSession(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/messages/stream"):
+			w.Header().Set("Content-Type", "text/event-stream")
+			flusher, ok := w.(http.Flusher)
+			if !ok {
+				http.Error(w, "SSE not supported", http.StatusInternalServerError)
+				return
+			}
+
+			msg := Message{Role: RoleAssistant, Parts: []Part{NewTextPart("Response")}}
+			msgJSON, _ := json.Marshal(msg)
+			fmt.Fprintf(w, "event:message\n")
+			fmt.Fprintf(w, "data:%s\n\n", msgJSON)
+			flusher.Flush()
+
+			fmt.Fprintf(w, "event:done\n")
+			fmt.Fprintf(w, "data:{}\n\n")
+			flusher.Flush()
+
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	a := NewA2AAgent(client)
+
+	// Create a session with existing task ID
+	session := NewA2ASessionWithContextID("existing-ctx")
+	session.SetTaskID("existing-task-123")
+
+	messages := []agent.Message{
+		chat.NewUserMessage("Continue conversation"),
+	}
+
+	updates, err := a.RunStream(context.Background(), messages, agent.WithSession(session))
+	if err != nil {
+		t.Fatalf("RunStream() error = %v", err)
+	}
+
+	var count int
+	for range updates {
+		count++
+	}
+
+	if count == 0 {
+		t.Error("expected updates from stream with existing session")
+	}
+}
+
+// TestA2AAgent_ConvertA2AMessageWithDataPart tests converting messages with unsupported data parts.
+func TestA2AAgent_ConvertA2AMessageWithDataPart(t *testing.T) {
+	client := NewClient("http://localhost:8080")
+	a := NewA2AAgent(client)
+
+	// Test message with data part (no URI) - should be skipped
+	msg := &Message{
+		Role: RoleAssistant,
+		Parts: []Part{
+			{Type: PartTypeFile, MimeType: "application/json"},
+		},
+	}
+
+	agentMsg := a.convertA2AMessageToAgent(msg)
+
+	// File part without URI should be skipped
+	if len(agentMsg.Contents) != 0 {
+		t.Errorf("len(Contents) = %d, want 0 (file part without URI should be skipped)", len(agentMsg.Contents))
+	}
+}
