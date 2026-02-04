@@ -37,6 +37,17 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 ### Added
 
 * go/workflow/checkpoint_test.go - Comprehensive unit tests for checkpointing (14 test cases covering InMemoryCheckpointStore CRUD, thread-safety, WorkflowRunner checkpoint save/restore, and error cases)
+* go/workflow/executors/doc.go - Package documentation for built-in executor implementations
+* go/workflow/executors/agent.go - AgentExecutor wrapping agent.Agent for workflow participation
+* go/workflow/executors/function.go - FunctionExecutor wrapping simple handler functions for transformations
+* go/workflow/executors/aggregating.go - AggregatingExecutor for fan-in patterns collecting messages from multiple sources
+* go/workflow/executors/agent_test.go - Unit tests for AgentExecutor (7 test cases)
+* go/workflow/executors/function_test.go - Unit tests for FunctionExecutor (7 test cases)
+* go/workflow/executors/aggregating_test.go - Unit tests for AggregatingExecutor (12 test cases)
+
+### Modified
+
+* go/workflow/context.go - Added NewWorkflowContextForTest helper for external package testing
 
 ### Removed
 

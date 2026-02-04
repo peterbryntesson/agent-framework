@@ -130,3 +130,20 @@ func newWorkflowContext(
 		outbox:     make([]WorkflowMessage, 0),
 	}
 }
+
+// NewWorkflowContextForTest creates a WorkflowContext for use in tests.
+// This function is exported for testing purposes and should not be
+// used in production code.
+func NewWorkflowContextForTest(
+	ctx context.Context,
+	executorID string,
+	runID string,
+	superstep int,
+	messages []WorkflowMessage,
+	state *sync.Map,
+) *WorkflowContext {
+	if state == nil {
+		state = &sync.Map{}
+	}
+	return newWorkflowContext(ctx, executorID, runID, superstep, messages, state)
+}
