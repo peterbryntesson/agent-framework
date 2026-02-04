@@ -53,6 +53,8 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 ### Modified
 
 * go/workflow/context.go - Added NewWorkflowContextForTest helper for external package testing
+* go/protocol/a2a/server.go - A2A Server HTTP implementation exposing agent.Agent via A2A protocol with AgentCard, Task management, SendMessage, SendMessageStream SSE streaming, and CancelTask endpoints
+* go/protocol/a2a/server_test.go - Comprehensive unit tests for A2A Server (45+ test cases covering all endpoints, message conversion, session management, streaming, and integration flows)
 
 ### Removed
 
@@ -65,6 +67,10 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * Phase 4 checkpoint.go already had Checkpoint struct and CheckpointStore interface from Phase 1
   * Step 4.1 was already complete, only needed InMemoryCheckpointStore implementation
   * Added runner methods for checkpoint integration
+
+* Phase 8 session storage uses wrapper struct instead of raw slice
+  * Go slices are not comparable, preventing use of sync.Map.CompareAndSwap
+  * Added sessionTasks wrapper struct with mutex protection for thread-safe task ID management
 
 ## Release Summary
 
