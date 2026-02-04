@@ -2,6 +2,13 @@
 
 package textsearch
 
+import (
+	"github.com/microsoft/agent-framework-go/chat"
+)
+
+// DefaultRecentMessageRolesIncluded is the default list of roles to include in memory.
+var DefaultRecentMessageRolesIncluded = []string{string(chat.RoleUser)}
+
 // SearchBehavior controls when search is performed.
 type SearchBehavior int
 
@@ -59,6 +66,22 @@ type Options struct {
 	// ResultFormatter customizes how results are formatted.
 	// If nil, the default formatter is used.
 	ResultFormatter ResultFormatter
+
+	// RecentMessageMemoryLimit sets the maximum number of recent messages to
+	// retain in memory for context building. When set to 0 (default), memory
+	// is disabled and only current request messages are used for search input.
+	// The value is a count of individual messages, not turns.
+	RecentMessageMemoryLimit int
+
+	// RecentMessageRolesIncluded filters which message roles are included
+	// when retaining recent messages in memory. This allows you to control
+	// whether to include only user messages, only assistant messages, or both.
+	// Default: []chat.Role{chat.RoleUser}
+	//
+	// Be careful when including assistant messages, as they may skew search
+	// results towards information already provided rather than focusing on
+	// the user's current needs.
+	RecentMessageRolesIncluded []string
 }
 
 // Option is a functional option for configuring the provider.
@@ -113,14 +136,37 @@ func WithResultFormatter(formatter ResultFormatter) Option {
 	}
 }
 
+// WithRecentMessageMemoryLimit sets the maximum number of recent messages
+// to retain in memory for context building. Set to 0 to disable memory
+// (only current request messages will be used for search).
+func WithRecentMessageMemoryLimit(limit int) Option {
+	return func(o *Options) {
+		if limit < 0 {
+			limit = 0
+		}
+		o.RecentMessageMemoryLimit = limit
+	}
+}
+
+// WithRecentMessageRolesIncluded sets the list of message roles to include
+// when retaining recent messages in memory. Use chat.RoleUser, chat.RoleAssistant, etc.
+// Defaults to only user messages when not specified.
+func WithRecentMessageRolesIncluded(roles ...string) Option {
+	return func(o *Options) {
+		o.RecentMessageRolesIncluded = roles
+	}
+}
+
 // defaultOptions returns options with default values.
 func defaultOptions() Options {
 	return Options{
-		MaxResults:            DefaultMaxResults,
-		ContextPrompt:         DefaultContextPrompt,
-		CitationsPrompt:       DefaultCitationsPrompt,
-		SearchBehavior:        BeforeAIInvoke,
-		SearchToolName:        DefaultSearchToolName,
-		SearchToolDescription: DefaultSearchToolDescription,
+		MaxResults:                 DefaultMaxResults,
+		ContextPrompt:              DefaultContextPrompt,
+		CitationsPrompt:            DefaultCitationsPrompt,
+		SearchBehavior:             BeforeAIInvoke,
+		SearchToolName:             DefaultSearchToolName,
+		SearchToolDescription:      DefaultSearchToolDescription,
+		RecentMessageMemoryLimit:   0, // Disabled by default
+		RecentMessageRolesIncluded: DefaultRecentMessageRolesIncluded,
 	}
 }

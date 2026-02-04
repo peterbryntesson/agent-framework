@@ -184,7 +184,10 @@ func TestInvoking_OnDemand_ReturnsTool(t *testing.T) {
 
 func TestInvoked_UpdatesMemory(t *testing.T) {
 	searchFn := mockSearchFunc(nil, nil)
-	p := New(searchFn)
+	p := New(searchFn,
+		WithRecentMessageMemoryLimit(10),
+		WithRecentMessageRolesIncluded(string(chat.RoleUser), string(chat.RoleAssistant)),
+	)
 
 	assert.Equal(t, 0, p.MemorySize())
 
@@ -203,7 +206,7 @@ func TestInvoked_UpdatesMemory(t *testing.T) {
 
 func TestInvoked_FiltersOwnOutput(t *testing.T) {
 	searchFn := mockSearchFunc(nil, nil)
-	p := New(searchFn)
+	p := New(searchFn, WithRecentMessageMemoryLimit(10))
 
 	request := []agent.Message{
 		chat.NewUserMessage("Hello"),
@@ -275,7 +278,7 @@ func TestFormatResults_MultipleSeparator(t *testing.T) {
 
 func TestSerialize_Restore_RoundTrip(t *testing.T) {
 	searchFn := mockSearchFunc(nil, nil)
-	p := New(searchFn)
+	p := New(searchFn, WithRecentMessageMemoryLimit(10))
 
 	// Add some messages to memory
 	request := []agent.Message{
@@ -289,7 +292,7 @@ func TestSerialize_Restore_RoundTrip(t *testing.T) {
 	require.NotNil(t, data)
 
 	// Create new provider and restore
-	p2 := New(searchFn)
+	p2 := New(searchFn, WithRecentMessageMemoryLimit(10))
 	err = p2.Restore(data)
 	require.NoError(t, err)
 
@@ -299,11 +302,11 @@ func TestSerialize_Restore_RoundTrip(t *testing.T) {
 func TestNewFromState_RestoresProvider(t *testing.T) {
 	// Create a state with valid message structure
 	searchFn := mockSearchFunc(nil, nil)
-	originalP := New(searchFn)
+	originalP := New(searchFn, WithRecentMessageMemoryLimit(10))
 	_ = originalP.Invoked(context.Background(), []agent.Message{chat.NewUserMessage("Hello")}, nil, nil)
 	state, _ := originalP.Serialize()
 
-	p, err := NewFromState(searchFn, state, WithMaxResults(5))
+	p, err := NewFromState(searchFn, state, WithMaxResults(5), WithRecentMessageMemoryLimit(10))
 	require.NoError(t, err)
 	require.NotNil(t, p)
 
@@ -321,7 +324,7 @@ func TestNewFromState_InvalidState(t *testing.T) {
 
 func TestClearMemory(t *testing.T) {
 	searchFn := mockSearchFunc(nil, nil)
-	p := New(searchFn)
+	p := New(searchFn, WithRecentMessageMemoryLimit(10))
 
 	// Add some memory
 	request := []agent.Message{chat.NewUserMessage("Test")}
@@ -374,6 +377,8 @@ func TestDefaultOptions(t *testing.T) {
 	assert.Equal(t, DefaultSearchToolName, opts.SearchToolName)
 	assert.Equal(t, DefaultSearchToolDescription, opts.SearchToolDescription)
 	assert.Nil(t, opts.ResultFormatter)
+	assert.Equal(t, 0, opts.RecentMessageMemoryLimit)
+	assert.Equal(t, DefaultRecentMessageRolesIncluded, opts.RecentMessageRolesIncluded)
 }
 
 func TestWithNilOption(t *testing.T) {
@@ -386,7 +391,7 @@ func TestWithNilOption(t *testing.T) {
 
 func TestExtractTextFromMessages_WithMemory(t *testing.T) {
 	searchFn := mockSearchFunc(nil, nil)
-	p := New(searchFn)
+	p := New(searchFn, WithRecentMessageMemoryLimit(10))
 
 	// Add to memory
 	_ = p.Invoked(context.Background(), []agent.Message{
@@ -401,4 +406,155 @@ func TestExtractTextFromMessages_WithMemory(t *testing.T) {
 	text := p.extractTextFromMessages(newMessages)
 	assert.Contains(t, text, "First message")
 	assert.Contains(t, text, "Second message")
+}
+
+func TestInvoked_MemoryDisabled_NoMessagesStored(t *testing.T) {
+	searchFn := mockSearchFunc(nil, nil)
+	// Memory is disabled by default (RecentMessageMemoryLimit = 0)
+	p := New(searchFn)
+
+	request := []agent.Message{
+		chat.NewUserMessage("Hello"),
+	}
+	response := []agent.Message{
+		chat.NewAssistantMessage("Hi there"),
+	}
+
+	err := p.Invoked(context.Background(), request, response, nil)
+	require.NoError(t, err)
+
+	// No messages should be stored when memory is disabled
+	assert.Equal(t, 0, p.MemorySize())
+}
+
+func TestInvoked_MemoryLimit_TrimsOldMessages(t *testing.T) {
+	searchFn := mockSearchFunc(nil, nil)
+	p := New(searchFn,
+		WithRecentMessageMemoryLimit(3),
+		WithRecentMessageRolesIncluded(string(chat.RoleUser)),
+	)
+
+	// Add 5 user messages across multiple invocations
+	for i := 1; i <= 5; i++ {
+		msg := chat.NewUserMessage("Message " + string(rune('0'+i)))
+		_ = p.Invoked(context.Background(), []agent.Message{msg}, nil, nil)
+	}
+
+	// Should only keep the last 3 messages
+	assert.Equal(t, 3, p.MemorySize())
+}
+
+func TestInvoked_RoleFilter_OnlyIncludesUserMessages(t *testing.T) {
+	searchFn := mockSearchFunc(nil, nil)
+	p := New(searchFn,
+		WithRecentMessageMemoryLimit(10),
+		// Default only includes user messages
+	)
+
+	request := []agent.Message{
+		chat.NewUserMessage("User message"),
+	}
+	response := []agent.Message{
+		chat.NewAssistantMessage("Assistant message"),
+	}
+
+	err := p.Invoked(context.Background(), request, response, nil)
+	require.NoError(t, err)
+
+	// Only user message should be stored (default behavior)
+	assert.Equal(t, 1, p.MemorySize())
+}
+
+func TestInvoked_RoleFilter_IncludesMultipleRoles(t *testing.T) {
+	searchFn := mockSearchFunc(nil, nil)
+	p := New(searchFn,
+		WithRecentMessageMemoryLimit(10),
+		WithRecentMessageRolesIncluded(string(chat.RoleUser), string(chat.RoleAssistant)),
+	)
+
+	request := []agent.Message{
+		chat.NewUserMessage("User message"),
+	}
+	response := []agent.Message{
+		chat.NewAssistantMessage("Assistant message"),
+	}
+
+	err := p.Invoked(context.Background(), request, response, nil)
+	require.NoError(t, err)
+
+	// Both user and assistant messages should be stored
+	assert.Equal(t, 2, p.MemorySize())
+}
+
+func TestInvoked_RoleFilter_OnlyAssistantMessages(t *testing.T) {
+	searchFn := mockSearchFunc(nil, nil)
+	p := New(searchFn,
+		WithRecentMessageMemoryLimit(10),
+		WithRecentMessageRolesIncluded(string(chat.RoleAssistant)),
+	)
+
+	request := []agent.Message{
+		chat.NewUserMessage("User message"),
+	}
+	response := []agent.Message{
+		chat.NewAssistantMessage("Assistant message"),
+	}
+
+	err := p.Invoked(context.Background(), request, response, nil)
+	require.NoError(t, err)
+
+	// Only assistant message should be stored
+	assert.Equal(t, 1, p.MemorySize())
+}
+
+func TestInvoked_SkipsOnError(t *testing.T) {
+	searchFn := mockSearchFunc(nil, nil)
+	p := New(searchFn,
+		WithRecentMessageMemoryLimit(10),
+		WithRecentMessageRolesIncluded(string(chat.RoleUser)),
+	)
+
+	request := []agent.Message{
+		chat.NewUserMessage("User message"),
+	}
+	response := []agent.Message{
+		chat.NewAssistantMessage("Assistant message"),
+	}
+
+	// Invoke with an error
+	invokeErr := assert.AnError
+	err := p.Invoked(context.Background(), request, response, invokeErr)
+	require.NoError(t, err)
+
+	// No messages should be stored on error
+	assert.Equal(t, 0, p.MemorySize())
+}
+
+func TestWithRecentMessageMemoryLimit_NegativeValue(t *testing.T) {
+	searchFn := mockSearchFunc(nil, nil)
+	// Negative values should be treated as 0
+	p := New(searchFn, WithRecentMessageMemoryLimit(-5))
+
+	assert.Equal(t, 0, p.options.RecentMessageMemoryLimit)
+}
+
+func TestWithRecentMessageRolesIncluded_EmptyList(t *testing.T) {
+	searchFn := mockSearchFunc(nil, nil)
+	p := New(searchFn,
+		WithRecentMessageMemoryLimit(10),
+		WithRecentMessageRolesIncluded(), // Empty list
+	)
+
+	request := []agent.Message{
+		chat.NewUserMessage("User message"),
+	}
+	response := []agent.Message{
+		chat.NewAssistantMessage("Assistant message"),
+	}
+
+	err := p.Invoked(context.Background(), request, response, nil)
+	require.NoError(t, err)
+
+	// No messages should be stored when no roles are included
+	assert.Equal(t, 0, p.MemorySize())
 }

@@ -46,6 +46,8 @@ func TestIntegration_BeforeAIInvokeMode_InjectsContext(t *testing.T) {
 	provider := textsearch.New(backend.search,
 		textsearch.WithMaxResults(2),
 		textsearch.WithContextPrompt("Reference these documents:"),
+		textsearch.WithRecentMessageMemoryLimit(10),
+		textsearch.WithRecentMessageRolesIncluded(string(chat.RoleUser), string(chat.RoleAssistant)),
 	)
 
 	// Simulate user asking a question
@@ -103,7 +105,10 @@ func TestIntegration_StatePersistence_AcrossSessions(t *testing.T) {
 	backend := newMockSearchBackend()
 
 	// Session 1: Create provider and have a conversation
-	provider1 := textsearch.New(backend.search)
+	provider1 := textsearch.New(backend.search,
+		textsearch.WithRecentMessageMemoryLimit(10),
+		textsearch.WithRecentMessageRolesIncluded(string(chat.RoleUser), string(chat.RoleAssistant)),
+	)
 
 	messages := []agent.Message{
 		chat.NewUserMessage("Hello"),
@@ -120,7 +125,10 @@ func TestIntegration_StatePersistence_AcrossSessions(t *testing.T) {
 	require.NoError(t, err)
 
 	// Session 2: Create new provider from saved state
-	provider2, err := textsearch.NewFromState(backend.search, state)
+	provider2, err := textsearch.NewFromState(backend.search, state,
+		textsearch.WithRecentMessageMemoryLimit(10),
+		textsearch.WithRecentMessageRolesIncluded(string(chat.RoleUser), string(chat.RoleAssistant)),
+	)
 	require.NoError(t, err)
 
 	// Provider2 should have the same memory as provider1
@@ -215,7 +223,10 @@ func TestIntegration_ContextCancellation(t *testing.T) {
 
 func TestIntegration_MultiTurnConversation(t *testing.T) {
 	backend := newMockSearchBackend()
-	provider := textsearch.New(backend.search)
+	provider := textsearch.New(backend.search,
+		textsearch.WithRecentMessageMemoryLimit(10),
+		textsearch.WithRecentMessageRolesIncluded(string(chat.RoleUser), string(chat.RoleAssistant)),
+	)
 
 	ctx := context.Background()
 
