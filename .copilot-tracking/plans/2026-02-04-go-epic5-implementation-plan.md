@@ -26,38 +26,41 @@ This plan implements 7 enterprise production features for the Go Agent Framework
 
 ---
 
-## Phase 1: Foundation (Weeks 1-2)
+## Phase 1: Foundation (Weeks 1-2) ✅ COMPLETED
 
-### Feature 5.7: Production Hardening
+### Feature 5.7: Production Hardening ✅
 
 **Objective:** Implement resilience patterns as reusable middleware for chat clients and agents.
 
-#### Task 5.7.1: Create Resilience Package Structure
+**Status:** ✅ Completed on 2026-02-04  
+**Changes Log:** [2026-02-04-go-epic5-phase1-changes.md](../changes/2026-02-04-go-epic5-phase1-changes.md)
 
-**Files to Create:**
+#### Task 5.7.1: Create Resilience Package Structure ✅
+
+**Files Created:**
 
 ```
 go/resilience/
-├── doc.go
-├── ratelimit.go
-├── ratelimit_test.go
-├── circuitbreaker.go
-├── circuitbreaker_test.go
-├── retry.go
-├── retry_test.go
-├── pool.go
-├── pool_test.go
-└── options.go
+├── doc.go           ✅
+├── ratelimit.go     ✅
+├── ratelimit_test.go ✅
+├── circuitbreaker.go ✅
+├── circuitbreaker_test.go ✅
+├── retry.go         ✅
+├── retry_test.go    ✅
+├── pool.go          ✅
+├── pool_test.go     ✅
+└── options.go       ✅
 ```
 
 **Subtasks:**
 
-| ID | Task | File | Acceptance Criteria |
-|----|------|------|---------------------|
-| 5.7.1.1 | Create package documentation | `doc.go` | Package overview with usage examples |
-| 5.7.1.2 | Create options types | `options.go` | Common configuration structs |
+| ID | Task | File | Acceptance Criteria | Status |
+|----|------|------|---------------------|--------|
+| 5.7.1.1 | Create package documentation | `doc.go` | Package overview with usage examples | ✅ |
+| 5.7.1.2 | Create options types | `options.go` | Common configuration structs | ✅ |
 
-#### Task 5.7.2: Implement Rate Limiter
+#### Task 5.7.2: Implement Rate Limiter ✅
 
 **File:** `go/resilience/ratelimit.go`
 
@@ -100,18 +103,18 @@ func (r *RateLimiter) Middleware() chat.Middleware
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.7.2.1 | Implement `NewRateLimiter` | Token bucket with global limiter |
-| 5.7.2.2 | Implement `Wait` | Blocks until allowed, respects context |
-| 5.7.2.3 | Implement `WaitForClient` | Per-client limiting with lazy initialization |
-| 5.7.2.4 | Implement `Middleware` | Returns `chat.Middleware` wrapper |
-| 5.7.2.5 | Write unit tests | 90%+ coverage, test context cancellation |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.7.2.1 | Implement `NewRateLimiter` | Token bucket with global limiter | ✅ |
+| 5.7.2.2 | Implement `Wait` | Blocks until allowed, respects context | ✅ |
+| 5.7.2.3 | Implement `WaitForClient` | Per-client limiting with lazy initialization | ✅ |
+| 5.7.2.4 | Implement `Middleware` | Returns `chat.Middleware` wrapper | ✅ |
+| 5.7.2.5 | Write unit tests | 90%+ coverage, test context cancellation | ✅ |
 
 **Dependencies:**
-- Add `golang.org/x/time` to `go.mod` (direct dependency)
+- Add `golang.org/x/time` to `go.mod` (direct dependency) ✅
 
-#### Task 5.7.3: Implement Circuit Breaker
+#### Task 5.7.3: Implement Circuit Breaker ✅
 
 **File:** `go/resilience/circuitbreaker.go`
 
@@ -157,18 +160,18 @@ func (cb *CircuitBreaker) State() gobreaker.State
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.7.3.1 | Implement `NewCircuitBreaker` | Configurable settings via options |
-| 5.7.3.2 | Implement option functions | MaxRequests, Timeout, ReadyToTrip |
-| 5.7.3.3 | Implement `Execute` | Wraps gobreaker.Execute |
-| 5.7.3.4 | Implement `Middleware` | Returns `chat.Middleware` wrapper |
-| 5.7.3.5 | Write unit tests | Test all states: closed, open, half-open |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.7.3.1 | Implement `NewCircuitBreaker` | Configurable settings via options | ✅ |
+| 5.7.3.2 | Implement option functions | MaxRequests, Timeout, ReadyToTrip | ✅ |
+| 5.7.3.3 | Implement `Execute` | Wraps gobreaker.Execute | ✅ |
+| 5.7.3.4 | Implement `Middleware` | Returns `chat.Middleware` wrapper | ✅ |
+| 5.7.3.5 | Write unit tests | Test all states: closed, open, half-open | ✅ |
 
 **Dependencies:**
-- Add `github.com/sony/gobreaker v1.0.0` to `go.mod`
+- Add `github.com/sony/gobreaker/v2` to `go.mod` ✅
 
-#### Task 5.7.4: Implement Retry Policy
+#### Task 5.7.4: Implement Retry Policy ✅
 
 **File:** `go/resilience/retry.go`
 
@@ -221,19 +224,19 @@ func (p *RetryPolicy) Middleware() chat.Middleware
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.7.4.1 | Implement `NewRetryPolicy` | Default to exponential backoff |
-| 5.7.4.2 | Implement backoff options | Exponential, linear, jitter |
-| 5.7.4.3 | Implement `WithRetryableCheck` | Use existing `chat.IsRetryable` as default |
-| 5.7.4.4 | Implement `Execute` | Respect context cancellation |
-| 5.7.4.5 | Implement `Middleware` | Returns `chat.Middleware` wrapper |
-| 5.7.4.6 | Write unit tests | Test backoff timing, max attempts |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.7.4.1 | Implement `NewRetryPolicy` | Default to exponential backoff | ✅ |
+| 5.7.4.2 | Implement backoff options | Exponential, linear, jitter | ✅ |
+| 5.7.4.3 | Implement `WithRetryableCheck` | Use existing `chat.IsRetryable` as default | ✅ |
+| 5.7.4.4 | Implement `Execute` | Respect context cancellation | ✅ |
+| 5.7.4.5 | Implement `Middleware` | Returns `chat.Middleware` wrapper | ✅ |
+| 5.7.4.6 | Write unit tests | Test backoff timing, max attempts | ✅ |
 
 **Dependencies:**
-- Promote `github.com/cenkalti/backoff/v5` to direct dependency
+- Promote `github.com/cenkalti/backoff/v5` to direct dependency ✅
 
-#### Task 5.7.5: Implement HTTP Client Pool Configuration
+#### Task 5.7.5: Implement HTTP Client Pool Configuration ✅
 
 **File:** `go/resilience/pool.go`
 
@@ -269,12 +272,12 @@ func NewHTTPTransport(config PoolConfig) *http.Transport
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.7.5.1 | Define `PoolConfig` | All relevant transport settings |
-| 5.7.5.2 | Implement `DefaultPoolConfig` | Production-ready defaults |
-| 5.7.5.3 | Implement `NewHTTPClient` | Configured client with transport |
-| 5.7.5.4 | Write unit tests | Verify configuration applied |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.7.5.1 | Define `PoolConfig` | All relevant transport settings | ✅ |
+| 5.7.5.2 | Implement `DefaultPoolConfig` | Production-ready defaults | ✅ |
+| 5.7.5.3 | Implement `NewHTTPClient` | Configured client with transport | ✅ |
+| 5.7.5.4 | Write unit tests | Verify configuration applied | ✅ |
 
 ---
 
