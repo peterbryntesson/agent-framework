@@ -139,25 +139,25 @@ Implement comprehensive workflow orchestration and communication protocols for t
   * Run executor tests
   * Verify integration with workflow runner
 
-### [ ] Implementation Phase 6: A2A Protocol Types
+### [x] Implementation Phase 6: A2A Protocol Types
 
 <!-- parallelizable: true -->
 
-* [ ] Step 6.1: Create protocol/a2a package structure
+* [x] Step 6.1: Create protocol/a2a package structure
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 2360-2420)
-* [ ] Step 6.2: Define AgentCard type
+* [x] Step 6.2: Define AgentCard type
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 2422-2520)
-* [ ] Step 6.3: Define Task and TaskState types
+* [x] Step 6.3: Define Task and TaskState types
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 2522-2620)
-* [ ] Step 6.4: Define Message and Part types
+* [x] Step 6.4: Define Message and Part types
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 2622-2740)
-* [ ] Step 6.5: Define Artifact type
+* [x] Step 6.5: Define Artifact type
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 2742-2820)
-* [ ] Step 6.6: Implement JSON marshaling for A2A types
+* [x] Step 6.6: Implement JSON marshaling for A2A types
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 2822-2920)
-* [ ] Step 6.7: Write unit tests for A2A types
+* [x] Step 6.7: Write unit tests for A2A types
   * Details: .copilot-tracking/details/2026-02-04-go-epic4-workflow-protocols-details.md (Lines 2922-3000)
-* [ ] Step 6.8: Validate Phase 6 changes
+* [x] Step 6.8: Validate Phase 6 changes
   * Run A2A type tests
   * Verify JSON serialization matches spec
 

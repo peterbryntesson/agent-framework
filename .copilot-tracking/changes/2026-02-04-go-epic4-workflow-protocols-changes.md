@@ -44,6 +44,9 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * go/workflow/executors/agent_test.go - Unit tests for AgentExecutor (7 test cases)
 * go/workflow/executors/function_test.go - Unit tests for FunctionExecutor (7 test cases)
 * go/workflow/executors/aggregating_test.go - Unit tests for AggregatingExecutor (12 test cases)
+* go/protocol/a2a/doc.go - Package documentation for A2A protocol types with Client/Server usage examples
+* go/protocol/a2a/types.go - A2A protocol type definitions (AgentCard, Task, Message, Part, Artifact, StreamEvent, request/response types, and helper constructors)
+* go/protocol/a2a/types_test.go - Comprehensive unit tests for A2A type serialization (17 test cases covering JSON round-tripping for all types)
 
 ### Modified
 
