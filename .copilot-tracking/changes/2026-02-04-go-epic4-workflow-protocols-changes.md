@@ -56,6 +56,8 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * go/protocol/agui/doc.go - Package documentation for AG-UI protocol with event types overview and usage examples
 * go/protocol/agui/events.go - AG-UI event types implementing Event interface with 12 event types (RunStarted, RunFinished, RunError, TextMessageStart/Content/End, ToolCallStart/Args/End/Result, StateSnapshot, StateDelta)
 * go/protocol/agui/events_test.go - Comprehensive unit tests for AG-UI events (40 test cases covering event creation, JSON marshaling, interface compliance)
+* go/protocol/agui/converter.go - EventConverter for converting agent.ResponseUpdate to AG-UI events with lifecycle tracking, text message streaming, tool call streaming, flush methods, and RunStarted/RunFinished helpers
+* go/protocol/agui/converter_test.go - Comprehensive unit tests for EventConverter (45 test cases covering all update kinds, lifecycle management, streaming scenarios, flush operations)
 
 ### Removed
 
