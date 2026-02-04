@@ -112,3 +112,11 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * Phase 13 selector.go uses Message.Text() method for keyword extraction
   * Initially attempted interface type assertion for Text() method
   * chat.TextContent has Text field, not Text() method; agent.Message has Text() method that concatenates all text content
+* go/workflow/groupchat/selectors.go - Built-in selector implementations: RoundRobinSelector (cycles through agents in order), RandomSelector (picks random agent with optional deterministic RNG), LLMSelector (uses decision agent to select next speaker based on conversation context)
+* go/workflow/groupchat/selectors_test.go - Comprehensive unit tests for built-in selectors (33 test cases covering creation, selection logic, error handling, thread-safety, custom instructions, conversation history in prompts)
+
+## Additional or Deviating Changes
+
+* Phase 14 LLMSelector uses Response.Text() helper method instead of Response.Message
+  * agent.Response has Messages slice (plural), not Message field
+  * Response.Text() concatenates text from all messages
