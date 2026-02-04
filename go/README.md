@@ -809,6 +809,434 @@ func main() {
 }
 ```
 
+## Workflow Orchestration
+
+Build complex DAG-based workflows with multiple agents using the workflow package. Workflows use a Pregel-like execution model where executors process messages in synchronized supersteps.
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "os"
+
+    "github.com/microsoft/agent-framework-go/agent"
+    "github.com/microsoft/agent-framework-go/chatagent"
+    "github.com/microsoft/agent-framework-go/providers/openai"
+    "github.com/microsoft/agent-framework-go/workflow"
+    "github.com/microsoft/agent-framework-go/workflow/executors"
+)
+
+func main() {
+    ctx := context.Background()
+
+    client, err := openai.NewClient(
+        openai.WithAPIKey(os.Getenv("OPENAI_API_KEY")),
+        openai.WithModel("gpt-4o"),
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Create specialized agents
+    researcher := chatagent.New(client,
+        chatagent.WithName("Researcher"),
+        chatagent.WithInstructions("Research the topic and provide key facts."),
+    )
+
+    analyzer := chatagent.New(client,
+        chatagent.WithName("Analyzer"),
+        chatagent.WithInstructions("Analyze the research and identify patterns."),
+    )
+
+    writer := chatagent.New(client,
+        chatagent.WithName("Writer"),
+        chatagent.WithInstructions("Write a summary based on the analysis."),
+    )
+
+    // Wrap agents as workflow executors
+    researchExec := executors.NewAgentExecutor("research", researcher)
+    analyzeExec := executors.NewAgentExecutor("analyze", analyzer)
+    writeExec := executors.NewAgentExecutor("write", writer)
+
+    // Build the workflow DAG: research -> analyze -> write
+    wf, err := workflow.NewBuilder(researchExec).
+        WithName("ResearchPipeline").
+        AddExecutor(analyzeExec).
+        AddExecutor(writeExec).
+        AddEdge("research", "analyze").
+        AddEdge("analyze", "write").
+        MarkAsOutput("write").
+        Build()
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Run the workflow
+    runner := workflow.NewRunner(wf)
+    result, err := runner.Run(ctx, "Explain the benefits of microservices architecture")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Print outputs from the final executor
+    for _, msg := range result.Outputs {
+        fmt.Println(msg.Content.Text())
+    }
+}
+```
+
+### Fan-Out / Fan-In Pattern
+
+Process data through multiple agents in parallel:
+
+```go
+// Build workflow with parallel processing
+wf, _ := workflow.NewBuilder(inputExec).
+    AddExecutors(analysisA, analysisB, analysisC).
+    AddExecutor(aggregator).
+    AddFanOut("input", "analysisA", "analysisB", "analysisC").
+    AddFanIn([]string{"analysisA", "analysisB", "analysisC"}, "aggregator").
+    MarkAsOutput("aggregator").
+    Build()
+```
+
+### Conditional Routing
+
+Route messages based on content:
+
+```go
+// Add conditional edge based on message content
+wf, _ := workflow.NewBuilder(classifier).
+    AddExecutors(positiveHandler, negativeHandler, neutralHandler).
+    SwitchFrom("classifier").
+        Case(func(msg any) bool {
+            return strings.Contains(msg.(agent.Message).Text(), "positive")
+        }, "positiveHandler").
+        Case(func(msg any) bool {
+            return strings.Contains(msg.(agent.Message).Text(), "negative")
+        }, "negativeHandler").
+        Default("neutralHandler").
+    Build()
+```
+
+## A2A Protocol (Agent-to-Agent)
+
+The A2A protocol enables standardized communication between AI agents over HTTP. Use it to connect agents across services and organizations.
+
+### A2A Server
+
+Expose your agent as an A2A-compliant endpoint:
+
+```go
+package main
+
+import (
+    "log"
+    "net/http"
+    "os"
+
+    "github.com/microsoft/agent-framework-go/chatagent"
+    "github.com/microsoft/agent-framework-go/protocol/a2a"
+    "github.com/microsoft/agent-framework-go/providers/openai"
+)
+
+func main() {
+    client, _ := openai.NewClient(
+        openai.WithAPIKey(os.Getenv("OPENAI_API_KEY")),
+        openai.WithModel("gpt-4o"),
+    )
+
+    // Create your agent
+    myAgent := chatagent.New(client,
+        chatagent.WithName("HelpfulAssistant"),
+        chatagent.WithDescription("A helpful AI assistant"),
+        chatagent.WithInstructions("You are a helpful assistant."),
+    )
+
+    // Create A2A server with custom agent card
+    server := a2a.NewServer(myAgent, a2a.WithAgentCard(&a2a.AgentCard{
+        Name:        "HelpfulAssistant",
+        Description: "A helpful AI assistant accessible via A2A protocol",
+        Capabilities: &a2a.AgentCapabilities{
+            Streaming: true,
+        },
+    }))
+
+    // Mount the A2A handler
+    http.Handle("/a2a/", http.StripPrefix("/a2a", server.Handler()))
+
+    log.Println("A2A server listening on :8080")
+    log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
+### A2A Client
+
+Connect to remote A2A agents:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/microsoft/agent-framework-go/protocol/a2a"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // Create A2A client
+    client := a2a.NewClient("http://remote-agent.example.com/a2a")
+
+    // Discover agent capabilities
+    card, err := client.GetAgentCard(ctx)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Connected to: %s\n", card.Name)
+
+    // Create a task
+    task, err := client.CreateTask(ctx, &a2a.CreateTaskRequest{
+        Message: a2a.NewTextMessage(a2a.RoleUser, "Hello, can you help me?"),
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Send follow-up messages
+    task, err = client.SendMessage(ctx, task.ID, a2a.NewTextMessage(
+        a2a.RoleUser,
+        "What's the weather like today?",
+    ))
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Print agent response
+    for _, msg := range task.Messages {
+        if msg.Role == a2a.RoleAgent {
+            fmt.Printf("Agent: %s\n", a2a.MessageText(&msg))
+        }
+    }
+}
+```
+
+### A2A Agent Wrapper
+
+Use remote A2A agents as local agents:
+
+```go
+// Create an A2A agent that wraps a remote endpoint
+remoteAgent := a2a.NewA2AAgent("http://remote-agent.example.com/a2a")
+
+// Use it like any other agent
+response, _ := remoteAgent.Run(ctx, []agent.Message{
+    agent.NewUserMessage("Tell me about AI agents"),
+})
+fmt.Println(response.Text())
+```
+
+## AG-UI Protocol (Agent-to-UI)
+
+The AG-UI protocol provides real-time streaming of agent responses to UI clients using Server-Sent Events (SSE).
+
+```go
+package main
+
+import (
+    "log"
+    "net/http"
+    "os"
+
+    "github.com/microsoft/agent-framework-go/chatagent"
+    "github.com/microsoft/agent-framework-go/protocol/agui"
+    "github.com/microsoft/agent-framework-go/providers/openai"
+)
+
+func main() {
+    client, _ := openai.NewClient(
+        openai.WithAPIKey(os.Getenv("OPENAI_API_KEY")),
+        openai.WithModel("gpt-4o"),
+    )
+
+    // Create your agent
+    myAgent := chatagent.New(client,
+        chatagent.WithName("StreamingAssistant"),
+        chatagent.WithInstructions("You are a helpful assistant."),
+    )
+
+    // Create AG-UI server
+    server := agui.NewServer(myAgent)
+
+    // Mount the AG-UI handler
+    http.Handle("/agui/", http.StripPrefix("/agui", server.Handler()))
+
+    // Serve a simple HTML page for testing
+    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Content-Type", "text/html")
+        w.Write([]byte(`<!DOCTYPE html>
+<html>
+<body>
+    <h1>AG-UI Demo</h1>
+    <div id="output"></div>
+    <script>
+        fetch('/agui/stream', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                messages: [{role: 'user', content: 'Tell me a story'}]
+            })
+        }).then(response => {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            function read() {
+                reader.read().then(({done, value}) => {
+                    if (done) return;
+                    document.getElementById('output').innerHTML += decoder.decode(value);
+                    read();
+                });
+            }
+            read();
+        });
+    </script>
+</body>
+</html>`))
+    })
+
+    log.Println("AG-UI server listening on :8080")
+    log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
+AG-UI events include:
+
+- `RUN_STARTED` / `RUN_FINISHED` / `RUN_ERROR` - Lifecycle events
+- `TEXT_MESSAGE_START` / `TEXT_MESSAGE_CONTENT` / `TEXT_MESSAGE_END` - Text streaming
+- `TOOL_CALL_START` / `TOOL_CALL_ARGS` / `TOOL_CALL_END` / `TOOL_CALL_RESULT` - Tool calls
+- `STATE_SNAPSHOT` / `STATE_DELTA` - State synchronization
+
+## Group Chat Orchestration
+
+Orchestrate conversations between multiple agents with pluggable speaker selection strategies:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "os"
+
+    "github.com/microsoft/agent-framework-go/agent"
+    "github.com/microsoft/agent-framework-go/chatagent"
+    "github.com/microsoft/agent-framework-go/providers/openai"
+    "github.com/microsoft/agent-framework-go/workflow/groupchat"
+)
+
+func main() {
+    ctx := context.Background()
+
+    client, _ := openai.NewClient(
+        openai.WithAPIKey(os.Getenv("OPENAI_API_KEY")),
+        openai.WithModel("gpt-4o"),
+    )
+
+    // Create participating agents
+    techExpert := chatagent.New(client,
+        chatagent.WithName("TechExpert"),
+        chatagent.WithDescription("Expert in technology and software"),
+        chatagent.WithInstructions("You are a technology expert. Provide technical insights."),
+    )
+
+    businessAnalyst := chatagent.New(client,
+        chatagent.WithName("BusinessAnalyst"),
+        chatagent.WithDescription("Expert in business strategy"),
+        chatagent.WithInstructions("You are a business analyst. Focus on ROI and strategy."),
+    )
+
+    moderator := chatagent.New(client,
+        chatagent.WithName("Moderator"),
+        chatagent.WithDescription("Discussion moderator"),
+        chatagent.WithInstructions("You moderate discussions and summarize key points."),
+    )
+
+    agents := []agent.Agent{techExpert, businessAnalyst, moderator}
+
+    // Create group chat manager with round-robin selection
+    selector, _ := groupchat.NewRoundRobinSelector(agents...)
+    manager, _ := groupchat.NewManager(agents,
+        groupchat.WithSelector(selector),
+        groupchat.WithMaxTurns(6),
+        groupchat.WithTerminationCondition(groupchat.KeywordCondition("DONE")),
+    )
+
+    // Run the group chat
+    result, err := manager.Run(ctx, "Discuss the pros and cons of adopting AI in enterprise")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Print the conversation
+    fmt.Println("=== Group Chat Transcript ===")
+    for _, entry := range result.Transcript.Entries {
+        fmt.Printf("[%s]: %s\n\n", entry.SpeakerName, entry.Message.Text())
+    }
+}
+```
+
+### LLM-Based Speaker Selection
+
+Use an AI to intelligently select the next speaker:
+
+```go
+// Create a decision agent for speaker selection
+decisionAgent := chatagent.New(client,
+    chatagent.WithName("Moderator"),
+    chatagent.WithInstructions("Select the most appropriate next speaker."),
+)
+
+// Create LLM selector
+selector, _ := groupchat.NewLLMSelector(decisionAgent, agents,
+    groupchat.WithSelectionInstructions(`
+        Based on the conversation, select the participant who can best 
+        contribute to the current topic. Consider expertise and recent participation.
+    `),
+)
+
+manager, _ := groupchat.NewManager(agents,
+    groupchat.WithSelector(selector),
+    groupchat.WithMaxTurns(10),
+)
+```
+
+### Streaming Group Chat
+
+Stream events as the group chat progresses:
+
+```go
+events, _ := manager.RunStream(ctx, "Start the discussion")
+
+for event := range events {
+    switch event.Kind {
+    case groupchat.EventKindSpeakerSelected:
+        fmt.Printf("\n--- %s's turn ---\n", event.SpeakerName)
+    case groupchat.EventKindAgentResponseUpdate:
+        if event.ResponseUpdate != nil && event.ResponseUpdate.Delta != nil {
+            fmt.Print(event.ResponseUpdate.Delta.TextDelta)
+        }
+    case groupchat.EventKindCompleted:
+        fmt.Println("\n\n=== Discussion Complete ===")
+    }
+}
+```
+
 ## Documentation
 
 - [Go Package Documentation](https://pkg.go.dev/github.com/microsoft/agent-framework-go)

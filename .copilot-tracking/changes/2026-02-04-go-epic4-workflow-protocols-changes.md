@@ -142,3 +142,23 @@ Implementing comprehensive workflow orchestration and communication protocols fo
 * Phase 15 options.go created as separate file for functional options
   * Plan details were unavailable (file has fewer lines than referenced)
   * Options inspired by .NET GroupChatManager patterns: history filtering, callbacks, system prompts
+## Phase 16: Integration and Examples
+
+### Modified
+
+* go/README.md - Added comprehensive Epic 4 documentation including:
+  * Workflow Orchestration section with DAG execution, fan-out/fan-in patterns, and conditional routing examples
+  * A2A Protocol section with server and client examples, plus A2AAgent wrapper usage
+  * AG-UI Protocol section with SSE streaming server example and event type reference
+  * Group Chat Orchestration section with round-robin selection, LLM-based selection, and streaming examples
+
+### Added
+
+### Removed
+
+## Additional or Deviating Changes
+
+* Phase 16 examples added to README.md instead of creating separate example files
+  * README already has inline code examples pattern established
+  * Examples provide complete, runnable code snippets demonstrating each feature
+  * Package structure section already lists workflow and protocol packages
