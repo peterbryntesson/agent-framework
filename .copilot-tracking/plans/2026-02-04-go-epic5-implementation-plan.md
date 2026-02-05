@@ -983,37 +983,38 @@ func (f *AgentFactory) parseHostedTool(t Tool, hostedName string) (tool.Tool, er
 
 ---
 
-## Phase 4: MCP Integration (Weeks 8-10)
+## Phase 4: MCP Integration (Weeks 8-10) ✅ COMPLETED
 
-### Feature 5.4: MCP Integration
+### Feature 5.4: MCP Integration ✅
 
 **Objective:** Enable agents to use tools from MCP servers and expose agents as MCP servers.
 
-#### Task 5.4.1: Create MCP Package Structure
+**Status:** ✅ Completed on 2026-02-05  
+**Changes Log:** [2026-02-05-go-epic5-phase4-changes.md](../changes/2026-02-05-go-epic5-phase4-changes.md)
 
-**Files to Create:**
+#### Task 5.4.1: Create MCP Package Structure ✅
+
+**Files Created:**
 
 ```
 go/mcp/
-├── doc.go
-├── client.go
-├── client_test.go
-├── transport.go
-├── transport_stdio.go
-├── transport_stdio_test.go
-├── transport_http.go
-├── transport_http_test.go
-├── tool.go
-├── tool_test.go
-├── server.go
-├── server_test.go
-├── types.go
-├── hosted.go
-└── hosted_test.go
+├── doc.go           ✅
+├── client.go        ✅
+├── client_test.go   ✅
+├── transport.go     ✅
+├── transport_stdio.go ✅
+├── transport_http.go ✅
+├── transport_test.go ✅
+├── tool.go          ✅
+├── tool_test.go     ✅
+├── server.go        ✅
+├── server_test.go   ✅
+├── types.go         ✅
+└── types_test.go    ✅
 ```
 
 **Dependencies:**
-- Add `github.com/mark3labs/mcp-go v0.8.0` to `go.mod`
+- No external MCP library added - custom implementation following MCP specification
 
 #### Task 5.4.2: Define MCP Types
 
@@ -1056,14 +1057,14 @@ type ResourceInfo struct {
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.4.2.1 | Define `ToolInfo` | MCP tool definition |
-| 5.4.2.2 | Define `Content` | Content types |
-| 5.4.2.3 | Define `CallToolResult` | Tool result structure |
-| 5.4.2.4 | Define `ResourceInfo` | Resource definition |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.4.2.1 | Define `ToolInfo` | MCP tool definition | ✅ |
+| 5.4.2.2 | Define `Content` | Content types | ✅ |
+| 5.4.2.3 | Define `CallToolResult` | Tool result structure | ✅ |
+| 5.4.2.4 | Define `ResourceInfo` | Resource definition | ✅ |
 
-#### Task 5.4.3: Implement Transport Interface
+#### Task 5.4.3: Implement Transport Interface ✅
 
 **File:** `go/mcp/transport.go`
 
@@ -1177,15 +1178,15 @@ func (t *StdioTransport) Send(ctx context.Context, method string, params any) (j
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.4.4.1 | Implement `NewStdioTransport` | Initialize command |
-| 5.4.4.2 | Implement `Start` | Start process, get pipes |
-| 5.4.4.3 | Implement `Send` | JSON-RPC request/response |
-| 5.4.4.4 | Implement `Close` | Terminate process |
-| 5.4.4.5 | Write stdio tests | Mock process for testing |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.4.4.1 | Implement `NewStdioTransport` | Initialize command | ✅ |
+| 5.4.4.2 | Implement `Start` | Start process, get pipes | ✅ |
+| 5.4.4.3 | Implement `Send` | JSON-RPC request/response | ✅ |
+| 5.4.4.4 | Implement `Close` | Terminate process | ✅ |
+| 5.4.4.5 | Write stdio tests | Mock process for testing | ⏳ (Deferred - requires process mocking) |
 
-#### Task 5.4.5: Implement HTTP Transport
+#### Task 5.4.5: Implement HTTP Transport ✅
 
 **File:** `go/mcp/transport_http.go`
 
@@ -1252,15 +1253,15 @@ func (t *HTTPTransport) Send(ctx context.Context, method string, params any) (js
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.4.5.1 | Implement `NewHTTPTransport` | Configure endpoint |
-| 5.4.5.2 | Implement `Start` | SSE connection |
-| 5.4.5.3 | Implement `Send` | HTTP POST JSON-RPC |
-| 5.4.5.4 | Implement SSE parsing | Event stream handling |
-| 5.4.5.5 | Write HTTP tests | Mock server for testing |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.4.5.1 | Implement `NewHTTPTransport` | Configure endpoint | ✅ |
+| 5.4.5.2 | Implement `Start` | SSE connection | ✅ |
+| 5.4.5.3 | Implement `Send` | HTTP POST JSON-RPC | ✅ |
+| 5.4.5.4 | Implement SSE parsing | Event stream handling | ✅ |
+| 5.4.5.5 | Write HTTP tests | Mock server for testing | ⏳ (Deferred) |
 
-#### Task 5.4.6: Implement MCP Client
+#### Task 5.4.6: Implement MCP Client ✅
 
 **File:** `go/mcp/client.go`
 
@@ -1348,16 +1349,16 @@ func (c *Client) Tools() []tool.Tool {
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.4.6.1 | Implement `NewClient` | Initialize with transport |
-| 5.4.6.2 | Implement `Connect` | Initialize and discover tools |
-| 5.4.6.3 | Implement `ListTools` | Return cached tools |
-| 5.4.6.4 | Implement `CallTool` | Invoke tool via transport |
-| 5.4.6.5 | Implement `Tools` | Return bridged tool.Tool slice |
-| 5.4.6.6 | Write client tests | Test full lifecycle |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.4.6.1 | Implement `NewClient` | Initialize with transport | ✅ |
+| 5.4.6.2 | Implement `Connect` | Initialize and discover tools | ✅ |
+| 5.4.6.3 | Implement `ListTools` | Return cached tools | ✅ |
+| 5.4.6.4 | Implement `CallTool` | Invoke tool via transport | ✅ |
+| 5.4.6.5 | Implement `Tools` | Return bridged tool.Tool slice | ✅ |
+| 5.4.6.6 | Write client tests | Test full lifecycle | ✅ |
 
-#### Task 5.4.7: Implement MCP Bridge Tool
+#### Task 5.4.7: Implement MCP Bridge Tool ✅
 
 **File:** `go/mcp/tool.go`
 
@@ -1413,14 +1414,14 @@ func (t *mcpBridgeTool) Invoke(ctx context.Context, args string) (tool.Result, e
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.4.7.1 | Implement `tool.Tool` interface | All methods |
-| 5.4.7.2 | Implement argument parsing | JSON to map |
-| 5.4.7.3 | Implement result conversion | MCP content to tool.Result |
-| 5.4.7.4 | Write bridge tests | Tool invocation |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.4.7.1 | Implement `tool.Tool` interface | All methods | ✅ |
+| 5.4.7.2 | Implement argument parsing | JSON to map | ✅ |
+| 5.4.7.3 | Implement result conversion | MCP content to tool.Result | ✅ |
+| 5.4.7.4 | Write bridge tests | Tool invocation | ✅ |
 
-#### Task 5.4.8: Implement Agent as MCP Server
+#### Task 5.4.8: Implement Agent as MCP Server ✅
 
 **File:** `go/mcp/server.go`
 
@@ -1499,13 +1500,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.4.8.1 | Implement `AsMCPServer` | Create server from agent |
-| 5.4.8.2 | Implement tool extraction | Extract agent tools as MCP tools |
-| 5.4.8.3 | Implement `ServeHTTP` | JSON-RPC 2.0 handler |
-| 5.4.8.4 | Implement method handlers | initialize, tools/list, tools/call |
-| 5.4.8.5 | Write server tests | HTTP request/response |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.4.8.1 | Implement `AsMCPServer` | Create server from agent | ✅ (Implemented as NewServer with WithTools) |
+| 5.4.8.2 | Implement tool extraction | Extract agent tools as MCP tools | ✅ |
+| 5.4.8.3 | Implement `ServeHTTP` | JSON-RPC 2.0 handler | ✅ (HTTPHandler method) |
+| 5.4.8.4 | Implement method handlers | initialize, tools/list, tools/call | ✅ |
+| 5.4.8.5 | Write server tests | HTTP request/response | ✅ |
 
 ---
 
