@@ -614,35 +614,38 @@ func (h *HostedAgent) SaveSession(ctx context.Context, convID string, session ag
 
 ---
 
-## Phase 3: Declarative Agents (Weeks 5-7)
+## Phase 3: Declarative Agents (Weeks 5-7) ✅ COMPLETED
 
-### Feature 5.2: Declarative Agent Definitions
+### Feature 5.2: Declarative Agent Definitions ✅
 
 **Objective:** Enable agents to be defined in YAML files and loaded dynamically.
 
-#### Task 5.2.1: Create Declarative Package Structure
+**Status:** ✅ Completed on 2026-02-04  
+**Changes Log:** [2026-02-04-go-epic5-phase3-changes.md](../changes/2026-02-04-go-epic5-phase3-changes.md)
 
-**Files to Create:**
+#### Task 5.2.1: Create Declarative Package Structure ✅
+
+**Files Created:**
 
 ```
 go/declarative/
-├── doc.go
-├── loader.go
-├── loader_test.go
-├── models.go
-├── models_test.go
-├── factory.go
-├── factory_test.go
-├── providers.go
-├── providers_test.go
-├── tools.go
-├── tools_test.go
-├── eval.go
-├── eval_test.go
-└── validation.go
+├── doc.go            ✅
+├── loader.go         ✅
+├── loader_test.go    ✅
+├── models.go         ✅
+├── models_test.go    ✅
+├── factory.go        ✅
+├── factory_test.go   ✅
+├── providers.go      ✅
+├── providers_test.go ✅
+├── tools.go          ✅
+├── tools_test.go     ✅
+├── eval.go           ✅
+├── eval_test.go      ✅
+└── validation.go     ✅
 ```
 
-#### Task 5.2.2: Define YAML Models
+#### Task 5.2.2: Define YAML Models ✅
 
 **File:** `go/declarative/models.go`
 
@@ -701,15 +704,15 @@ type PropertySchema struct {
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.2.2.1 | Define `PromptAgent` struct | All YAML fields mapped |
-| 5.2.2.2 | Define `Model` struct | Provider, connection, config |
-| 5.2.2.3 | Define `Tool` struct | All tool kinds supported |
-| 5.2.2.4 | Define `PropertySchema` | Parameter definitions |
-| 5.2.2.5 | Add YAML tags | Proper unmarshaling |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.2.2.1 | Define `PromptAgent` struct | All YAML fields mapped | ✅ |
+| 5.2.2.2 | Define `Model` struct | Provider, connection, config | ✅ |
+| 5.2.2.3 | Define `Tool` struct | All tool kinds supported | ✅ |
+| 5.2.2.4 | Define `PropertySchema` | Parameter definitions | ✅ |
+| 5.2.2.5 | Add YAML tags | Proper unmarshaling | ✅ |
 
-#### Task 5.2.3: Implement YAML Loader
+#### Task 5.2.3: Implement YAML Loader ✅
 
 **File:** `go/declarative/loader.go`
 
@@ -755,14 +758,14 @@ func LoadFromString(content string) (*PromptAgent, error) {
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.2.3.1 | Implement `LoadFromFile` | File reading with error handling |
-| 5.2.3.2 | Implement `LoadFromReader` | YAML parsing with validation |
-| 5.2.3.3 | Implement `LoadFromString` | String convenience method |
-| 5.2.3.4 | Write loader tests | Test all sample YAML files |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.2.3.1 | Implement `LoadFromFile` | File reading with error handling | ✅ |
+| 5.2.3.2 | Implement `LoadFromReader` | YAML parsing with validation | ✅ |
+| 5.2.3.3 | Implement `LoadFromString` | String convenience method | ✅ |
+| 5.2.3.4 | Write loader tests | Test all sample YAML files | ✅ |
 
-#### Task 5.2.4: Implement Environment Variable Evaluation
+#### Task 5.2.4: Implement Environment Variable Evaluation ✅
 
 **File:** `go/declarative/eval.go`
 
@@ -807,13 +810,13 @@ func evaluateStrings(agent *PromptAgent) error {
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.2.4.1 | Implement `tryPowerFxEval` | Parse =Env.VAR_NAME expressions |
-| 5.2.4.2 | Implement `evaluateStrings` | Recursive field evaluation |
-| 5.2.4.3 | Write eval tests | Test environment variable substitution |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.2.4.1 | Implement `tryPowerFxEval` | Parse =Env.VAR_NAME expressions | ✅ |
+| 5.2.4.2 | Implement `evaluateStrings` | Recursive field evaluation | ✅ |
+| 5.2.4.3 | Write eval tests | Test environment variable substitution | ✅ |
 
-#### Task 5.2.5: Implement Agent Factory
+#### Task 5.2.5: Implement Agent Factory ✅
 
 **File:** `go/declarative/factory.go`
 
@@ -858,15 +861,15 @@ func (f *AgentFactory) CreateFromString(ctx context.Context, content string) (ag
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.2.5.1 | Implement `NewAgentFactory` | Initialize with default providers |
-| 5.2.5.2 | Implement `WithBinding` | Register function bindings |
-| 5.2.5.3 | Implement `WithProvider` | Custom provider registration |
-| 5.2.5.4 | Implement `Create` | Build agent from definition |
-| 5.2.5.5 | Write factory tests | Test agent creation |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.2.5.1 | Implement `NewAgentFactory` | Initialize with default providers | ✅ |
+| 5.2.5.2 | Implement `WithBinding` | Register function bindings | ✅ |
+| 5.2.5.3 | Implement `WithProvider` | Custom provider registration | ✅ |
+| 5.2.5.4 | Implement `Create` | Build agent from definition | ✅ |
+| 5.2.5.5 | Write factory tests | Test agent creation | ✅ |
 
-#### Task 5.2.6: Implement Default Provider Builders
+#### Task 5.2.6: Implement Default Provider Builders ✅
 
 **File:** `go/declarative/providers.go`
 
@@ -912,14 +915,14 @@ func resolveAPIKey(conn Connection) (string, error) {
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.2.6.1 | Implement Azure OpenAI providers | Chat and Responses API types |
-| 5.2.6.2 | Implement OpenAI providers | Direct OpenAI API |
-| 5.2.6.3 | Implement `resolveAPIKey` | Handle connection types |
-| 5.2.6.4 | Write provider tests | Test each provider type |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.2.6.1 | Implement Azure OpenAI providers | Chat and Responses API types | ✅ |
+| 5.2.6.2 | Implement OpenAI providers | Direct OpenAI API | ✅ |
+| 5.2.6.3 | Implement `resolveAPIKey` | Handle connection types | ✅ |
+| 5.2.6.4 | Write provider tests | Test each provider type | ✅ |
 
-#### Task 5.2.7: Implement Tool Parsing
+#### Task 5.2.7: Implement Tool Parsing ✅
 
 **File:** `go/declarative/tools.go`
 
@@ -970,13 +973,13 @@ func (f *AgentFactory) parseHostedTool(t Tool, hostedName string) (tool.Tool, er
 
 **Subtasks:**
 
-| ID | Task | Acceptance Criteria |
-|----|------|---------------------|
-| 5.2.7.1 | Implement `parseTool` dispatcher | Route by kind |
-| 5.2.7.2 | Implement function tool parsing | Look up bindings |
-| 5.2.7.3 | Implement MCP tool parsing | Create hosted MCP tool |
-| 5.2.7.4 | Implement hosted tool parsing | Web search, file search, code interpreter |
-| 5.2.7.5 | Write tool parsing tests | Test all tool kinds |
+| ID | Task | Acceptance Criteria | Status |
+|----|------|---------------------|--------|
+| 5.2.7.1 | Implement `parseTool` dispatcher | Route by kind | ✅ |
+| 5.2.7.2 | Implement function tool parsing | Look up bindings | ✅ |
+| 5.2.7.3 | Implement MCP tool parsing | Create hosted MCP tool | ⏳ (Deferred to Phase 4) |
+| 5.2.7.4 | Implement hosted tool parsing | Web search, file search, code interpreter | ⏳ (Deferred) |
+| 5.2.7.5 | Write tool parsing tests | Test all tool kinds | ✅ |
 
 ---
 
