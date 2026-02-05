@@ -1,0 +1,18 @@
+{
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "Based on my analysis, here are the key points:\n\n1. The project has a solid foundation.\n2. Consider adding more unit tests.\n3. Documentation could be improved.\n\nWould you like me to elaborate on any of these points?"
+    }
+  ],
+  "finish_reason": "stop",
+  "usage": {
+    "input_tokens": 150,
+    "output_tokens": 75,
+    "total_tokens": 225
+  },
+  "metadata": {
+    "model": "gpt-4",
+    "request_id": "req_abc123"
+  }
+}

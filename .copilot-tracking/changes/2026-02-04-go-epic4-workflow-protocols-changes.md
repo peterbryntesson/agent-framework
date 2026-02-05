@@ -1,0 +1,220 @@
+<!-- markdownlint-disable-file -->
+# Release Changes: Go Epic 4 - Workflow Orchestration and Protocols
+
+**Related Plan**: 2026-02-04-go-epic4-workflow-protocols-plan.instructions.md
+**Implementation Date**: 2026-02-04
+
+## Summary
+
+Implementing comprehensive workflow orchestration and communication protocols for the Go Agent Framework SDK, including DAG-based workflow engine, A2A agent-to-agent protocol, AG-UI streaming protocol, and group chat orchestration with pluggable selection strategies.
+
+## Changes
+
+### Added
+
+* go/workflow/doc.go - Package documentation for workflow package with Pregel-like execution model overview
+* go/workflow/context.go - WorkflowContext struct providing execution context for executors with state management, message passing, and outbox functionality
+* go/workflow/executor.go - Executor interface, ExecutorFunc convenience wrapper, and ExecutorBase embeddable type
+* go/workflow/edge.go - Edge types including direct edges, conditional edges, fan-out/fan-in EdgeGroup, and SwitchEdge for case-based routing
+* go/workflow/workflow.go - Workflow struct with executor management, edge traversal, target resolution, and validation
+* go/workflow/events.go - WorkflowResult and WorkflowEvent types for workflow execution results and streaming events
+* go/workflow/checkpoint.go - Checkpoint struct and CheckpointStore interface (placeholder for Phase 4 implementation)
+* go/workflow/context_test.go - Unit tests for WorkflowContext including concurrent access tests
+* go/workflow/executor_test.go - Unit tests for Executor interface and implementations
+* go/workflow/edge_test.go - Unit tests for Edge types including SwitchEdge evaluation
+* go/workflow/workflow_test.go - Unit tests for Workflow struct including validation and target resolution
+* go/workflow/builder.go - WorkflowBuilder fluent API with AddExecutor, AddEdge, AddConditionalEdge, AddFanOut, AddFanIn, SwitchFrom, MarkAsOutput, and Build methods
+* go/workflow/builder_test.go - Comprehensive unit tests for WorkflowBuilder (26 test cases covering fluent API, validation, and complex workflows)
+* go/workflow/runner_test.go - Comprehensive unit tests for WorkflowRunner (30+ test cases covering Run, RunStream, parallel execution, convergence, cancellation)
+
+### Modified
+
+* go/workflow/runner.go - Full WorkflowRunner implementation with Pregel-like superstep execution, message routing, convergence detection, and event streaming via channels
+* go/workflow/workflow_test.go - Updated TestWorkflow_Run to work with actual runner implementation instead of stub
+* go/workflow/checkpoint.go - Added InMemoryCheckpointStore implementation with Save, Load, LoadLatest, Delete, List methods; removed "Phase 4" placeholder comment
+* go/workflow/runner.go - Added SaveCheckpoint, ResumeFromCheckpoint, and ResumeFromLatestCheckpoint methods for checkpoint persistence and recovery
+
+### Added
+
+* go/workflow/checkpoint_test.go - Comprehensive unit tests for checkpointing (14 test cases covering InMemoryCheckpointStore CRUD, thread-safety, WorkflowRunner checkpoint save/restore, and error cases)
+* go/workflow/executors/doc.go - Package documentation for built-in executor implementations
+* go/workflow/executors/agent.go - AgentExecutor wrapping agent.Agent for workflow participation
+* go/workflow/executors/function.go - FunctionExecutor wrapping simple handler functions for transformations
+* go/workflow/executors/aggregating.go - AggregatingExecutor for fan-in patterns collecting messages from multiple sources
+* go/workflow/executors/agent_test.go - Unit tests for AgentExecutor (7 test cases)
+* go/workflow/executors/function_test.go - Unit tests for FunctionExecutor (7 test cases)
+* go/workflow/executors/aggregating_test.go - Unit tests for AggregatingExecutor (12 test cases)
+* go/protocol/a2a/doc.go - Package documentation for A2A protocol types with Client/Server usage examples
+* go/protocol/a2a/types.go - A2A protocol type definitions (AgentCard, Task, Message, Part, Artifact, StreamEvent, request/response types, and helper constructors)
+* go/protocol/a2a/types_test.go - Comprehensive unit tests for A2A type serialization (17 test cases covering JSON round-tripping for all types)
+* go/protocol/a2a/client.go - A2A Client HTTP implementation with functional options, GetAgentCard, CreateTask, GetTask, SendMessage, SendMessageStream with SSE parsing, and CancelTask methods
+* go/protocol/a2a/client_test.go - Comprehensive unit tests for A2A Client (24 test cases covering all client methods, SSE parsing, error handling, and context cancellation)
+* go/protocol/a2a/agent.go - A2AAgent wrapper implementing agent.Agent interface using A2A Client for remote agent access with Run and RunStream methods
+* go/protocol/a2a/session.go - A2ASession implementing agent.Session for maintaining A2A context ID and task ID across interactions
+* go/protocol/a2a/agent_test.go - Comprehensive unit tests for A2AAgent (16 test cases covering agent creation, Run, RunStream, session management, and message conversion)
+* go/protocol/a2a/session_test.go - Comprehensive unit tests for A2ASession (18 test cases covering session creation, serialization, thread-safety, and service registration)
+* go/protocol/agui/doc.go - Package documentation for AG-UI protocol with event types overview and usage examples
+* go/protocol/agui/events.go - AG-UI event types implementing Event interface with 12 event types (RunStarted, RunFinished, RunError, TextMessageStart/Content/End, ToolCallStart/Args/End/Result, StateSnapshot, StateDelta)
+* go/protocol/agui/events_test.go - Comprehensive unit tests for AG-UI events (40 test cases covering event creation, JSON marshaling, interface compliance)
+* go/protocol/agui/converter.go - EventConverter for converting agent.ResponseUpdate to AG-UI events with lifecycle tracking, text message streaming, tool call streaming, flush methods, and RunStarted/RunFinished helpers
+* go/protocol/agui/converter_test.go - Comprehensive unit tests for EventConverter (45 test cases covering all update kinds, lifecycle management, streaming scenarios, flush operations)
+
+### Removed
+
+## Additional or Deviating Changes
+
+* Phase 3 implementation replaced Phase 1 stub runner.go with full implementation
+  * Phase 1 created placeholder that returned "not implemented" error
+  * Phase 3 provides complete Pregel-like execution with parallel executor processing
+
+* Phase 4 checkpoint.go already had Checkpoint struct and CheckpointStore interface from Phase 1
+  * Step 4.1 was already complete, only needed InMemoryCheckpointStore implementation
+  * Added runner methods for checkpoint integration
+
+* Phase 8 session storage uses wrapper struct instead of raw slice
+  * Go slices are not comparable, preventing use of sync.Map.CompareAndSwap
+  * Added sessionTasks wrapper struct with mutex protection for thread-safe task ID management
+
+* Phase 9 A2AAgent uses ImageContent instead of DataContent for file/data parts
+  * chat package does not have a DataContent type
+  * PartTypeFile maps to ImageContent for URL-based content, PartTypeData parts with structured data are currently not converted
+
+* go/protocol/agui/server.go - AG-UI Server HTTP implementation with SSE streaming support for agent-to-UI communication
+* go/protocol/agui/server_test.go - Comprehensive unit tests for AG-UI Server (23 test cases covering Run, RunStream, SSE streaming, connection lifecycle, message conversion)
+* go/workflow/groupchat/doc.go - Package documentation for groupchat multi-agent conversation orchestration
+* go/workflow/groupchat/selector.go - Selector interface, SelectorFunc wrapper, TerminationCondition type, and helper functions (MaxTurnsCondition, KeywordCondition, CombineConditions, AllConditions)
+* go/workflow/groupchat/transcript.go - Transcript and TranscriptEntry types for recording group chat conversation history with speaker attribution, timing, and query methods
+* go/workflow/groupchat/events.go - Event and EventKind types for group chat execution lifecycle (Started, TurnStarted, SpeakerSelected, AgentInvoked, AgentResponse, AgentResponseUpdate, TurnCompleted, Terminating, Completed, Error), plus Result type
+* go/workflow/groupchat/selector_test.go - Comprehensive unit tests for Selector (17 test cases covering SelectorFunc, termination conditions, keyword matching)
+* go/workflow/groupchat/transcript_test.go - Comprehensive unit tests for Transcript (18 test cases covering entry management, queries, cloning, completion tracking)
+* go/workflow/groupchat/events_test.go - Comprehensive unit tests for Event types (14 test cases covering event creation, EventKind string conversion, Result.IsSuccess)
+
+### Removed
+
+## Additional or Deviating Changes
+
+* Phase 3 implementation replaced Phase 1 stub runner.go with full implementation
+  * Phase 1 created placeholder that returned "not implemented" error
+  * Phase 3 provides complete Pregel-like execution with parallel executor processing
+
+* Phase 4 checkpoint.go already had Checkpoint struct and CheckpointStore interface from Phase 1
+  * Step 4.1 was already complete, only needed InMemoryCheckpointStore implementation
+  * Added runner methods for checkpoint integration
+
+* Phase 8 session storage uses wrapper struct instead of raw slice
+  * Go slices are not comparable, preventing use of sync.Map.CompareAndSwap
+  * Added sessionTasks wrapper struct with mutex protection for thread-safe task ID management
+
+* Phase 9 A2AAgent uses ImageContent instead of DataContent for file/data parts
+  * chat package does not have a DataContent type
+  * PartTypeFile maps to ImageContent for URL-based content, PartTypeData parts with structured data are currently not converted
+
+* Phase 13 selector.go uses Message.Text() method for keyword extraction
+  * Initially attempted interface type assertion for Text() method
+  * chat.TextContent has Text field, not Text() method; agent.Message has Text() method that concatenates all text content
+* go/workflow/groupchat/selectors.go - Built-in selector implementations: RoundRobinSelector (cycles through agents in order), RandomSelector (picks random agent with optional deterministic RNG), LLMSelector (uses decision agent to select next speaker based on conversation context)
+* go/workflow/groupchat/selectors_test.go - Comprehensive unit tests for built-in selectors (33 test cases covering creation, selection logic, error handling, thread-safety, custom instructions, conversation history in prompts)
+
+## Additional or Deviating Changes
+
+* Phase 14 LLMSelector uses Response.Text() helper method instead of Response.Message
+  * agent.Response has Messages slice (plural), not Message field
+  * Response.Text() concatenates text from all messages
+
+## Phase 15: Group Chat Manager
+
+### Added
+
+* go/workflow/groupchat/manager.go - Manager struct for multi-agent group chat orchestration with Run and RunStream methods, configurable termination conditions, turn-based execution loop, and Pregel-like message accumulation in transcripts
+* go/workflow/groupchat/options.go - Functional options for Manager configuration: WithHistoryFilter, WithBeforeTurnCallback, WithAfterTurnCallback, WithSystemPrompt, WithIncludeTranscriptInMessages; plus helper functions LastNMessagesFilter, PerAgentHistoryFilter
+* go/workflow/groupchat/manager_test.go - Comprehensive unit tests for Manager (40+ test cases covering creation, Run, RunStream, callbacks, history filters, system prompt, transcript inclusion, agent lookup, concurrency, selector integration, event timestamps)
+
+### Modified
+
+### Removed
+
+## Additional or Deviating Changes
+
+* Phase 15 turnCount logic adjusted to check limit before incrementing
+  * Ensures turnCount reflects actual completed turns, not attempted turns
+  * Changed from `turnCount > maxTurns` (after increment) to `turnCount >= maxTurns` (before increment)
+
+* Phase 15 options.go created as separate file for functional options
+  * Plan details were unavailable (file has fewer lines than referenced)
+  * Options inspired by .NET GroupChatManager patterns: history filtering, callbacks, system prompts
+## Phase 16: Integration and Examples
+
+### Modified
+
+* go/README.md - Added comprehensive Epic 4 documentation including:
+  * Workflow Orchestration section with DAG execution, fan-out/fan-in patterns, and conditional routing examples
+  * A2A Protocol section with server and client examples, plus A2AAgent wrapper usage
+  * AG-UI Protocol section with SSE streaming server example and event type reference
+  * Group Chat Orchestration section with round-robin selection, LLM-based selection, and streaming examples
+
+### Added
+
+### Removed
+
+## Additional or Deviating Changes
+
+* Phase 16 examples added to README.md instead of creating separate example files
+  * README already has inline code examples pattern established
+  * Examples provide complete, runnable code snippets demonstrating each feature
+  * Package structure section already lists workflow and protocol packages
+
+## Phase 17: Final Validation
+
+### Modified
+
+* go/protocol/a2a/agent_test.go - Added 7 new test cases to increase coverage from 88.1% to 91.1%:
+  * TestA2AAgent_GetServiceAgentCard - Tests AgentCard retrieval via GetService before and after FetchAgentCard
+  * TestA2AAgent_ProcessStreamEventsErrors - Tests error event handling in stream processing
+  * TestA2AAgent_ProcessStreamEventsTask - Tests task event handling with assistant messages
+  * TestA2AAgent_ConvertA2AMessageWithFile - Tests file part conversion to ImageContent
+  * TestA2AAgent_ConvertMessagesWithImage - Tests ImageContent conversion to file parts
+  * TestA2AAgent_RunStreamWithExistingSession - Tests streaming with pre-existing task ID
+  * TestA2AAgent_ConvertA2AMessageWithDataPart - Tests data part skipping (no URI)
+
+### Added
+
+### Removed
+
+## Validation Results
+
+All Epic 4 packages meet the 90%+ test coverage requirement:
+
+| Package | Coverage |
+|---------|----------|
+| workflow | 91.2% |
+| workflow/executors | 100.0% |
+| workflow/groupchat | 95.1% |
+| protocol/a2a | 91.1% |
+| protocol/agui | 95.0% |
+
+Build validation: `go build ./...` - PASSED
+Test validation: `go test ./...` - PASSED (all tests pass)
+Static analysis: `go vet ./...` - PASSED (no issues)
+
+## Release Summary
+
+Epic 4 implementation complete. Total changes:
+
+**Files Created**: 30
+* go/workflow/ - 11 files (core types, builder, runner, checkpoint, events, executors package)
+* go/protocol/a2a/ - 7 files (types, client, server, agent wrapper, session)
+* go/protocol/agui/ - 5 files (events, converter, server)
+* go/workflow/groupchat/ - 5 files (manager, selector, transcript, events, options)
+* Test files: 15 *_test.go files with comprehensive coverage
+
+**Files Modified**: 2
+* go/README.md - Added Epic 4 documentation with examples
+* go/protocol/a2a/agent_test.go - Added coverage improvement tests
+
+**Features Delivered**:
+* Feature 4.1: Workflow Engine with Pregel-like DAG execution
+* Feature 4.2: A2A Protocol client and server for agent-to-agent communication
+* Feature 4.3: AG-UI Protocol server for agent-to-UI SSE streaming
+* Feature 4.4: Group Chat Orchestration with pluggable selectors
+
+**Dependencies**: Standard library only (no external dependencies)

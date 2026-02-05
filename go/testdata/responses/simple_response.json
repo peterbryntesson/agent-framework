@@ -1,0 +1,14 @@
+{
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "Hello! How can I assist you today?"
+    }
+  ],
+  "finish_reason": "stop",
+  "usage": {
+    "input_tokens": 15,
+    "output_tokens": 10,
+    "total_tokens": 25
+  }
+}

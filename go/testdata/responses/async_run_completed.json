@@ -1,0 +1,7 @@
+{
+  "run_id": "run_xyz789",
+  "status": "completed",
+  "thread_id": "thread_abc123",
+  "started_at": "2026-01-15T10:30:00Z",
+  "completed_at": "2026-01-15T10:30:05Z"
+}
