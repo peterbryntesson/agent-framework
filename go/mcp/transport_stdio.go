@@ -90,7 +90,7 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 	}
 
 	// Create the command
-	t.cmd = exec.CommandContext(ctx, t.command, t.args...)
+	t.cmd = exec.CommandContext(ctx, t.command, t.args...) //nolint:gosec // G204: Command is user-configured for MCP server
 	if len(t.env) > 0 {
 		t.cmd.Env = t.env
 	}

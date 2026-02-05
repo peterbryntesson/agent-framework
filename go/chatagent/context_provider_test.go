@@ -330,6 +330,7 @@ func TestAgent_RunStream_WithContextProvider(t *testing.T) {
 
 	// Drain the channel
 	for range updates {
+		// intentionally empty - drain streaming updates
 	}
 
 	// Verify instructions were merged

@@ -181,6 +181,7 @@ func TestMiddlewareAgent_RunStream(t *testing.T) {
 
 	// Drain the stream
 	for range stream {
+		// intentionally empty - drain streaming updates
 	}
 }
 

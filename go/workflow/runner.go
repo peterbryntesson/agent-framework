@@ -263,14 +263,6 @@ func newInputMessage(input string) agent.Message {
 	return agent.NewUserMessage(input)
 }
 
-// getExecutorOptions retrieves options from an executor if available.
-func getExecutorOptions(exec Executor) ExecutorOptions {
-	if op, ok := exec.(OptionsProvider); ok {
-		return op.Options()
-	}
-	return DefaultExecutorOptions()
-}
-
 // executeSuperstep executes one superstep of the workflow.
 // Returns new messages for the next superstep, any outputs, halt status, and an error.
 func (r *WorkflowRunner) executeSuperstep(

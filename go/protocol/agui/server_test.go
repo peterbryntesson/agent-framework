@@ -529,8 +529,8 @@ func TestServer_CancelConnection_NotFound(t *testing.T) {
 	mockAgt := &mockAgent{id: "test-agent"}
 	server := NewServer(mockAgt)
 
-	cancelled := server.CancelConnection("nonexistent-id")
-	if cancelled {
+	canceled := server.CancelConnection("nonexistent-id")
+	if canceled {
 		t.Error("expected CancelConnection to return false for nonexistent connection")
 	}
 }
@@ -632,7 +632,7 @@ func TestServer_HandleRunStream_WithContextCancellation(t *testing.T) {
 			go func() {
 				defer close(updates)
 				close(startedCh)
-				// Block until context is cancelled
+				// Block until context is canceled
 				<-ctx.Done()
 			}()
 			return updates, nil

@@ -298,7 +298,7 @@ func TestAgentRun(t *testing.T) {
 		})
 
 		if err == nil {
-			t.Fatal("expected error from cancelled context")
+			t.Fatal("expected error from canceled context")
 		}
 	})
 }

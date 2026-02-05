@@ -99,7 +99,7 @@ func (s *RandomSelector) SelectNext(_ context.Context, _ *Transcript) (agent.Age
 	if s.rng != nil {
 		idx = s.rng.Intn(len(s.agents))
 	} else {
-		idx = rand.Intn(len(s.agents))
+		idx = rand.Intn(len(s.agents)) //nolint:gosec // G404: Random agent selection doesn't need crypto-grade randomness
 	}
 	return s.agents[idx], nil
 }

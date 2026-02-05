@@ -148,12 +148,12 @@ func (se *StatefulExecutor[T]) ReadState(wCtx *WorkflowContext) (T, error) {
 	// Deserialize from stored value
 	var state T
 	switch v := rawVal.(type) {
-	case T:
-		state = v
 	case json.RawMessage:
 		if err := json.Unmarshal(v, &state); err != nil {
 			return state, fmt.Errorf("failed to unmarshal state: %w", err)
 		}
+	case T:
+		state = v
 	default:
 		// Try JSON round-trip for compatibility
 		data, err := json.Marshal(v)

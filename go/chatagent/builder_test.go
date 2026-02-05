@@ -371,7 +371,5 @@ func TestBuilderMustBuildAgent(t *testing.T) {
 }
 
 // mockClient implementation for builder tests
-func init() {
-	// Ensure mockClient implements chat.Client
-	var _ chat.Client = (*mockClient)(nil)
-}
+// Compile-time check that mockClient implements chat.Client
+var _ chat.Client = (*mockClient)(nil)

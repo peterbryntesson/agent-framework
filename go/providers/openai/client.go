@@ -30,7 +30,7 @@ const (
 // Environment variable names.
 const (
 	// EnvAPIKey is the environment variable name for the OpenAI API key.
-	EnvAPIKey = "OPENAI_API_KEY"
+	EnvAPIKey = "OPENAI_API_KEY" //nolint:gosec // G101: Not a credential, just an env var name
 
 	// EnvBaseURL is the environment variable name for a custom API base URL.
 	EnvBaseURL = "OPENAI_BASE_URL"
@@ -120,7 +120,7 @@ func (c *Client) Metadata() chat.ClientMetadata {
 // GetResponse sends messages to the chat model and returns a complete response.
 // The messages parameter contains the conversation history and system prompts.
 // Options can configure model parameters like temperature, max tokens, and tools.
-// Returns an error if the request fails or the context is cancelled.
+// Returns an error if the request fails or the context is canceled.
 func (c *Client) GetResponse(ctx context.Context, messages []chat.Message, options *chat.Options) (*chat.Response, error) {
 	req := c.buildRequest(messages, options)
 

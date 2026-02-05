@@ -244,13 +244,13 @@ func setupMetrics(ctx context.Context, res *resource.Resource, cfg SetupConfig) 
 // SetupTracing configures only OpenTelemetry tracing with OTLP export.
 // This is a convenience function for applications that only need tracing.
 func SetupTracing(ctx context.Context, serviceName string, opts ...SetupOption) (Shutdown, error) {
-	allOpts := append(opts, WithMetricsEnabled(false))
-	return Setup(ctx, serviceName, allOpts...)
+	tracingOpts := append([]SetupOption{WithMetricsEnabled(false)}, opts...)
+	return Setup(ctx, serviceName, tracingOpts...)
 }
 
 // SetupMetrics configures only OpenTelemetry metrics with OTLP export.
 // This is a convenience function for applications that only need metrics.
 func SetupMetrics(ctx context.Context, serviceName string, opts ...SetupOption) (Shutdown, error) {
-	allOpts := append(opts, WithTracingEnabled(false))
-	return Setup(ctx, serviceName, allOpts...)
+	metricsOpts := append([]SetupOption{WithTracingEnabled(false)}, opts...)
+	return Setup(ctx, serviceName, metricsOpts...)
 }

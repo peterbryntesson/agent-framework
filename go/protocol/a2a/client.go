@@ -255,17 +255,18 @@ func (c *Client) parseSSE(ctx context.Context, r io.Reader, events chan<- Stream
 				}
 
 				// Parse the data based on event type
-				if eventType == StreamEventTypeMessage {
+				switch eventType {
+				case StreamEventTypeMessage:
 					var msg Message
 					if err := json.Unmarshal([]byte(data), &msg); err == nil {
 						event.Message = &msg
 					}
-				} else if eventType == StreamEventTypeTask {
+				case StreamEventTypeTask:
 					var task Task
 					if err := json.Unmarshal([]byte(data), &task); err == nil {
 						event.Task = &task
 					}
-				} else {
+				default:
 					// Store raw data for other event types
 					event.Data = json.RawMessage(data)
 				}

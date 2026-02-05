@@ -221,7 +221,7 @@ func (s *Server) unregisterConnection(connectionID string) {
 }
 
 // CancelConnection cancels an active connection by ID.
-// Returns true if the connection was found and cancelled.
+// Returns true if the connection was found and canceled.
 func (s *Server) CancelConnection(connectionID string) bool {
 	s.mu.Lock()
 	cancel, ok := s.activeConnections[connectionID]

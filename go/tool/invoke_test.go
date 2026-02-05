@@ -19,8 +19,8 @@ type mockTool struct {
 	invokeFn    func(ctx context.Context, args json.RawMessage) (Result, error)
 }
 
-func (m *mockTool) Name() string               { return m.name }
-func (m *mockTool) Description() string        { return m.description }
+func (m *mockTool) Name() string                { return m.name }
+func (m *mockTool) Description() string         { return m.description }
 func (m *mockTool) Parameters() json.RawMessage { return m.parameters }
 func (m *mockTool) Invoke(ctx context.Context, args json.RawMessage) (Result, error) {
 	if m.invokeFn != nil {

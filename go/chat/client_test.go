@@ -210,7 +210,7 @@ func TestOptions_Fields(t *testing.T) {
 
 func TestResponseText_NilResponse(t *testing.T) {
 	// Arrange
-	var response *Response = nil
+	var response *Response
 
 	// Act
 	text := response.Text()

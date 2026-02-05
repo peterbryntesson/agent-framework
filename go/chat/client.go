@@ -17,7 +17,7 @@ type Client interface {
 	// GetResponse sends messages to the chat model and returns a complete response.
 	// The messages parameter contains the conversation history and system prompts.
 	// Options can configure model parameters like temperature, max tokens, and tools.
-	// Returns an error if the request fails or the context is cancelled.
+	// Returns an error if the request fails or the context is canceled.
 	GetResponse(ctx context.Context, messages []Message, options *Options) (*Response, error)
 
 	// GetStreamingResponse sends messages and returns a channel of incremental updates.

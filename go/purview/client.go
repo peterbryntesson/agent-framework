@@ -97,7 +97,7 @@ func (c *Client) EvaluateContent(ctx context.Context, req EvaluationRequest) (*P
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Purview API returned status %d: %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("purview API returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	var evalResp EvaluationResponse
@@ -141,7 +141,7 @@ func (c *Client) GetScopeDefinition(ctx context.Context, scopeName string) (*Sco
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Purview API returned status %d: %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("purview API returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)

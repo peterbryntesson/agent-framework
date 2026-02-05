@@ -395,6 +395,7 @@ func TestWorkflowRunner_RunStream(t *testing.T) {
 
 		// Drain events
 		for range events {
+			// intentionally empty - drain streaming events
 		}
 
 		// Channel should be closed

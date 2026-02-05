@@ -318,6 +318,7 @@ func TestInstrumentedClient_GetStreamingResponse_WithError(t *testing.T) {
 
 	// Drain updates
 	for range updates {
+		// intentionally empty - drain streaming updates
 	}
 }
 

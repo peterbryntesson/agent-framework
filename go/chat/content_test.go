@@ -299,7 +299,7 @@ func TestContent_TypesAreDistinct(t *testing.T) {
 
 func TestMessage_Text_NilMessage(t *testing.T) {
 	// Arrange
-	var msg *Message = nil
+	var msg *Message
 
 	// Act
 	text := msg.Text()

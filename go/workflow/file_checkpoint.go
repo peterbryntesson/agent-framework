@@ -29,7 +29,7 @@ type FileCheckpointStore struct {
 // The basePath directory is created if it does not exist.
 func NewFileCheckpointStore(basePath string) (*FileCheckpointStore, error) {
 	// Ensure the base directory exists
-	if err := os.MkdirAll(basePath, 0755); err != nil {
+	if err := os.MkdirAll(basePath, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create checkpoint directory: %w", err)
 	}
 	return &FileCheckpointStore{
@@ -72,7 +72,7 @@ func (s *FileCheckpointStore) Save(ctx context.Context, checkpoint *Checkpoint) 
 
 	// Write to temporary file first for atomic operation
 	tempPath := targetPath + ".tmp"
-	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+	if err := os.WriteFile(tempPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write checkpoint file: %w", err)
 	}
 
@@ -195,7 +195,7 @@ func (s *FileCheckpointStore) listForRun(runID string) ([]*Checkpoint, error) {
 
 // loadFile reads and parses a checkpoint file.
 func (s *FileCheckpointStore) loadFile(path string) (*Checkpoint, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // G304: Path is constructed internally from base path
 	if err != nil {
 		return nil, fmt.Errorf("failed to read checkpoint file: %w", err)
 	}

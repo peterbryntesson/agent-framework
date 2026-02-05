@@ -91,7 +91,7 @@ const (
 	// TaskStateFailed indicates the task failed with an error.
 	TaskStateFailed TaskState = "failed"
 
-	// TaskStateCancelled indicates the task was cancelled.
+	// TaskStateCancelled indicates the task was canceled.
 	TaskStateCancelled TaskState = "cancelled"
 )
 

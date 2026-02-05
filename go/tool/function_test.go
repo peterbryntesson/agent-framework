@@ -21,11 +21,6 @@ type calculatorArgs struct {
 	Op string  `json:"op" description:"Operation" enum:"add,subtract,multiply,divide"`
 }
 
-type optionalArgs struct {
-	Required string  `json:"required" required:"true"`
-	Optional *string `json:"optional,omitempty"`
-}
-
 type emptyArgs struct{}
 
 // Test functions with various signatures.
@@ -53,14 +48,6 @@ func calculateFunc(args calculatorArgs) (float64, error) {
 
 func noArgsFunc(ctx context.Context) (string, error) {
 	return "no args result", nil
-}
-
-func noReturnFunc(args weatherArgs) error {
-	return nil
-}
-
-func panicFunc(ctx context.Context, _ emptyArgs) (string, error) {
-	panic("intentional panic")
 }
 
 func pointerArgsFunc(_ context.Context, args *weatherArgs) (string, error) {

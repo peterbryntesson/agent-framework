@@ -222,10 +222,3 @@ func handleRunUpdate(
 
 // GetHistoryQuery is a query to retrieve the conversation history.
 const GetHistoryQuery = "GetHistory"
-
-// registerHistoryQuery registers the query handler for retrieving history.
-func registerHistoryQuery(ctx workflow.Context, state *State) error {
-	return workflow.SetQueryHandler(ctx, GetHistoryQuery, func() (*State, error) {
-		return state.Clone(), nil
-	})
-}

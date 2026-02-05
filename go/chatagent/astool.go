@@ -104,11 +104,6 @@ func AsTool(a agent.Agent, opts AsToolOptions) tool.Tool {
 	}
 	paramsJSON, _ := json.Marshal(params)
 
-	// Create args struct for the function
-	type taskArgs struct {
-		Task string `json:"task"`
-	}
-
 	// Create a function that invokes the agent
 	fn := func(ctx context.Context, args json.RawMessage) (string, error) {
 		// Parse args to get the task input

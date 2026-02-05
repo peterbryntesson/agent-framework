@@ -76,6 +76,7 @@ func TestChatMiddleware_InvokedOnGetStreamingResponse(t *testing.T) {
 
 	// Drain the stream
 	for range updates {
+		// intentionally empty - drain streaming updates
 	}
 
 	if len(mw.invocations) < 2 {
@@ -308,6 +309,7 @@ func TestChatMiddleware_StreamingReceivesContext(t *testing.T) {
 
 	// Drain the stream
 	for range updates {
+		// intentionally empty - drain streaming updates
 	}
 
 	if !isStreaming {

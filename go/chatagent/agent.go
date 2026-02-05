@@ -365,17 +365,3 @@ func (a *Agent) notifyProviderInvoked(ctx context.Context, request []agent.Messa
 	// Best effort - log error but don't propagate
 	_ = lcp.Invoked(ctx, request, responseMessages, invokeErr)
 }
-
-// notifyProviderSessionCreated calls the SessionCreated lifecycle hook on the context provider.
-// This is a best-effort notification; errors are logged but not returned.
-func (a *Agent) notifyProviderSessionCreated(ctx context.Context, sessionID string) {
-	if a.contextProvider == nil {
-		return
-	}
-	lcp, ok := a.contextProvider.(agent.ContextProviderWithLifecycle)
-	if !ok {
-		return
-	}
-	// Best effort - log error but don't propagate
-	_ = lcp.SessionCreated(ctx, sessionID)
-}

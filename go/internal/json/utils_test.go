@@ -82,7 +82,7 @@ func TestMarshalToRawMessage_Primitives(t *testing.T) {
 
 func TestMarshalToRawMessage_NilInterface(t *testing.T) {
 	// Arrange
-	var input interface{} = nil
+	var input interface{}
 
 	// Act
 	result, err := MarshalToRawMessage(input)
@@ -94,7 +94,7 @@ func TestMarshalToRawMessage_NilInterface(t *testing.T) {
 
 func TestMarshalToRawMessage_NilPointer(t *testing.T) {
 	// Arrange
-	var input *testStruct = nil
+	var input *testStruct
 
 	// Act
 	result, err := MarshalToRawMessage(input)
@@ -207,7 +207,7 @@ func TestUnmarshalFromRawMessage_Slice(t *testing.T) {
 
 func TestUnmarshalFromRawMessage_NilData(t *testing.T) {
 	// Arrange
-	var data json.RawMessage = nil
+	var data json.RawMessage
 	var target testStruct
 
 	// Act
@@ -245,7 +245,7 @@ func TestUnmarshalFromRawMessage_NilTarget(t *testing.T) {
 func TestUnmarshalFromRawMessage_NilPointerTarget(t *testing.T) {
 	// Arrange
 	data := json.RawMessage(`{"name":"test"}`)
-	var target *testStruct = nil
+	var target *testStruct
 
 	// Act
 	err := UnmarshalFromRawMessage(data, target)

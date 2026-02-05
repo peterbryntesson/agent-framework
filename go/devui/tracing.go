@@ -129,7 +129,7 @@ func (c *TraceCollector) ExportSpans(_ interface{}, spans []trace.ReadOnlySpan) 
 		// Update status based on span status
 		if span.Status().Code.String() == "Error" {
 			tr.info.Status = "error"
-		} else if !tr.complete && span.Parent().SpanID().IsValid() == false {
+		} else if !tr.complete && !span.Parent().SpanID().IsValid() {
 			// Root span completed
 			tr.info.Status = "completed"
 			tr.complete = true

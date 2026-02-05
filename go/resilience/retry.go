@@ -160,6 +160,6 @@ func applyJitter(d time.Duration, factor float64) time.Duration {
 	if factor <= 0 {
 		return d
 	}
-	jitter := time.Duration(float64(d) * factor * (2*rand.Float64() - 1))
+	jitter := time.Duration(float64(d) * factor * (2*rand.Float64() - 1)) //nolint:gosec // G404: Jitter doesn't need crypto-grade randomness
 	return d + jitter
 }

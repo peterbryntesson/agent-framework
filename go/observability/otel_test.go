@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/trace"
 )
 
 func TestTracer_ReturnsTracer(t *testing.T) {
@@ -116,14 +115,4 @@ func TestRecordRequestOptions_SkipsZeroValues(t *testing.T) {
 
 	// Act - should not panic, should skip zero values
 	RecordRequestOptions(span, 0, 0, 0)
-}
-
-// mockSpan for testing attribute recording
-type mockSpan struct {
-	trace.Span
-	attributes map[string]interface{}
-}
-
-func (m *mockSpan) SetAttributes(kv ...interface{}) {
-	// Mock implementation
 }

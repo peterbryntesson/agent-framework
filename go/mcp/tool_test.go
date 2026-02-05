@@ -13,34 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockClientForTool is a minimal mock for testing tool adapter.
-type mockClientForTool struct {
-	tools       []ToolInfo
-	listErr     error
-	callResult  *CallToolResult
-	callErr     error
-	calledName  string
-	calledArgs  json.RawMessage
-	initialized bool
-	closed      bool
-}
-
-func (m *mockClientForTool) ListTools(ctx context.Context) ([]ToolInfo, error) {
-	if m.listErr != nil {
-		return nil, m.listErr
-	}
-	return m.tools, nil
-}
-
-func (m *mockClientForTool) CallTool(ctx context.Context, name string, arguments json.RawMessage) (*CallToolResult, error) {
-	m.calledName = name
-	m.calledArgs = arguments
-	if m.callErr != nil {
-		return nil, m.callErr
-	}
-	return m.callResult, nil
-}
-
 func TestNewToolAdapter(t *testing.T) {
 	t.Run("creates adapter with client", func(t *testing.T) {
 		// Arrange

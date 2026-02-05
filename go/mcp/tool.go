@@ -142,11 +142,12 @@ func convertCallToolResult(mcpResult *CallToolResult) tool.Result {
 
 	// Build the result content
 	var content string
-	if len(texts) == 1 {
+	switch {
+	case len(texts) == 1:
 		content = texts[0]
-	} else if len(texts) > 1 {
+	case len(texts) > 1:
 		content = strings.Join(texts, "\n")
-	} else if hasNonText {
+	case hasNonText:
 		// No text content, provide a summary
 		content = "[non-text content - see metadata]"
 	}

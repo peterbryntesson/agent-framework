@@ -34,7 +34,7 @@ const (
 	GenAIResponseModelKey = "gen_ai.response.model"
 
 	// GenAIRequestMaxTokensKey identifies the maximum tokens requested.
-	GenAIRequestMaxTokensKey = "gen_ai.request.max_tokens"
+	GenAIRequestMaxTokensKey = "gen_ai.request.max_tokens" //nolint:gosec // G101: Semantic convention, not credentials
 
 	// GenAIRequestTemperatureKey identifies the temperature setting.
 	GenAIRequestTemperatureKey = "gen_ai.request.temperature"
@@ -43,10 +43,10 @@ const (
 	GenAIRequestTopPKey = "gen_ai.request.top_p"
 
 	// GenAIUsageInputTokensKey identifies the number of input tokens.
-	GenAIUsageInputTokensKey = "gen_ai.usage.input_tokens"
+	GenAIUsageInputTokensKey = "gen_ai.usage.input_tokens" //nolint:gosec // G101: Semantic convention, not credentials
 
 	// GenAIUsageOutputTokensKey identifies the number of output tokens.
-	GenAIUsageOutputTokensKey = "gen_ai.usage.output_tokens"
+	GenAIUsageOutputTokensKey = "gen_ai.usage.output_tokens" //nolint:gosec // G101: Semantic convention, not credentials
 
 	// GenAIResponseFinishReasonsKey identifies why generation stopped.
 	GenAIResponseFinishReasonsKey = "gen_ai.response.finish_reasons"

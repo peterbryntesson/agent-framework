@@ -240,13 +240,6 @@ func (a *Agent) collectStreamUpdates(ctx context.Context, streamUpdates <-chan c
 
 		case chat.UpdateKindToolCall:
 			if update.Delta != nil {
-				// Use tool call ID as key for accumulation
-				toolCallID := update.Delta.ToolCallID
-				if toolCallID == "" {
-					// Use name as fallback key if ID not yet available
-					toolCallID = update.Delta.Name
-				}
-
 				// Find or create tool call entry using hash of ID
 				idx := len(toolCallsMap) // Simple index for new entries
 				for i, tc := range toolCallsMap {
@@ -505,9 +498,7 @@ func (a *Agent) invokeWithChatMiddleware(ctx context.Context, messages []chat.Me
 func convertMessagesToAgentMessages(messages []chat.Message) []agent.Message {
 	// agent.Message is an alias to chat.Message, so direct conversion works
 	result := make([]agent.Message, len(messages))
-	for i, m := range messages {
-		result[i] = m
-	}
+	copy(result, messages)
 	return result
 }
 

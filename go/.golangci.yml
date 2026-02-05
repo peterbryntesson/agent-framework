@@ -102,6 +102,15 @@ issues:
         - dupl
         - gosec
         - goconst
+        - errcheck
+        - gocyclo
+        - unparam
+        - govet
+
+    # Exclude testutil from certain linters
+    - path: testutil/
+      linters:
+        - gosec
 
     # Exclude shadow checking for err
     - text: 'shadow: declaration of "err"'

@@ -37,8 +37,8 @@ func TestHostedWebSearchTool_Invoke(t *testing.T) {
 	if err == nil {
 		t.Error("expected Invoke to return an error for hosted tools")
 	}
-	if err != hostedInvocationError {
-		t.Errorf("expected hostedInvocationError, got %v", err)
+	if err != errHostedInvocation {
+		t.Errorf("expected errHostedInvocation, got %v", err)
 	}
 }
 
@@ -412,8 +412,8 @@ func TestHostedTools_InvokeReturnsError(t *testing.T) {
 	for _, tool := range tools {
 		t.Run(tool.Name(), func(t *testing.T) {
 			_, err := tool.Invoke(ctx, args)
-			if err != hostedInvocationError {
-				t.Errorf("expected hostedInvocationError for %s, got %v", tool.Name(), err)
+			if err != errHostedInvocation {
+				t.Errorf("expected errHostedInvocation for %s, got %v", tool.Name(), err)
 			}
 		})
 	}

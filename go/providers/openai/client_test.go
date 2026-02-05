@@ -845,6 +845,7 @@ func TestClient_GetStreamingResponseWithTools(t *testing.T) {
 
 		// Drain the channel
 		for range updates {
+			// intentionally empty - drain streaming updates
 		}
 
 		// Verify tools were sent in request
@@ -911,6 +912,7 @@ func TestClient_GetStreamingResponseWithTools(t *testing.T) {
 
 		// Drain the channel
 		for range updates {
+			// intentionally empty - drain streaming updates
 		}
 
 		// Verify only function tool was sent (hosted tools skipped)

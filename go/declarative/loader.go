@@ -14,7 +14,7 @@ import (
 // LoadFromFile loads a PromptAgent from a YAML file.
 // The file path should point to a valid YAML agent definition.
 func LoadFromFile(path string) (*PromptAgent, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) //nolint:gosec // G304: User-provided path is the intended use case
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file %s: %w", path, err)
 	}

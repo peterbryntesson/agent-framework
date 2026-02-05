@@ -107,7 +107,7 @@
 //   - Missing API key: Returned when no API key is provided and OPENAI_API_KEY is not set
 //   - Network errors: HTTP transport failures wrapped with context
 //   - API errors: Rate limiting, authentication failures, and server errors
-//   - Context cancellation: When the context is cancelled during a request
+//   - Context cancellation: When the context is canceled during a request
 //
 // # Observability
 //

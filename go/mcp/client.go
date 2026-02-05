@@ -131,7 +131,7 @@ func (c *Client) initialize(ctx context.Context) error {
 
 	// Initialized is a notification, we don't wait for a response
 	if _, err := c.transport.Send(ctx, initNotification); err != nil {
-		// Log but don't fail - some servers may not require this
+		_ = err // Ignore: some MCP servers may not require the initialized notification
 	}
 
 	return nil

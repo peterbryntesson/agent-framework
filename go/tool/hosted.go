@@ -8,8 +8,8 @@ import (
 	"errors"
 )
 
-// hostedInvocationError is returned when attempting to invoke a hosted tool locally.
-var hostedInvocationError = errors.New("hosted tools are invoked by the provider, not locally")
+// errHostedInvocation is returned when attempting to invoke a hosted tool locally.
+var errHostedInvocation = errors.New("hosted tools are invoked by the provider, not locally")
 
 // UserLocation represents approximate user location for context-aware search.
 // This information can be provided to hosted web search tools to improve
@@ -84,7 +84,7 @@ func (t *HostedWebSearchTool) Parameters() json.RawMessage {
 
 // Invoke returns an error because hosted tools are executed by the provider.
 func (t *HostedWebSearchTool) Invoke(ctx context.Context, arguments json.RawMessage) (Result, error) {
-	return Result{}, hostedInvocationError
+	return Result{}, errHostedInvocation
 }
 
 // IsHosted returns true, indicating this tool runs on the provider.
@@ -190,7 +190,7 @@ func (t *HostedCodeInterpreterTool) Parameters() json.RawMessage {
 
 // Invoke returns an error because hosted tools are executed by the provider.
 func (t *HostedCodeInterpreterTool) Invoke(ctx context.Context, arguments json.RawMessage) (Result, error) {
-	return Result{}, hostedInvocationError
+	return Result{}, errHostedInvocation
 }
 
 // IsHosted returns true, indicating this tool runs on the provider.
@@ -289,7 +289,7 @@ func (t *HostedFileSearchTool) Parameters() json.RawMessage {
 
 // Invoke returns an error because hosted tools are executed by the provider.
 func (t *HostedFileSearchTool) Invoke(ctx context.Context, arguments json.RawMessage) (Result, error) {
-	return Result{}, hostedInvocationError
+	return Result{}, errHostedInvocation
 }
 
 // IsHosted returns true, indicating this tool runs on the provider.
@@ -411,7 +411,7 @@ func (t *HostedMCPTool) Parameters() json.RawMessage {
 
 // Invoke returns an error because hosted tools are executed by the provider.
 func (t *HostedMCPTool) Invoke(ctx context.Context, arguments json.RawMessage) (Result, error) {
-	return Result{}, hostedInvocationError
+	return Result{}, errHostedInvocation
 }
 
 // IsHosted returns true, indicating this tool runs on the provider.
@@ -566,7 +566,7 @@ func (t *HostedImageGenerationTool) Parameters() json.RawMessage {
 
 // Invoke returns an error because hosted tools are executed by the provider.
 func (t *HostedImageGenerationTool) Invoke(ctx context.Context, arguments json.RawMessage) (Result, error) {
-	return Result{}, hostedInvocationError
+	return Result{}, errHostedInvocation
 }
 
 // IsHosted returns true, indicating this tool runs on the provider.

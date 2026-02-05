@@ -36,7 +36,7 @@ func TestDataDir() string {
 func LoadFixture(path string) ([]byte, error) {
 	fullPath := filepath.Join(TestDataDir(), path)
 
-	data, err := os.ReadFile(fullPath)
+	data, err := os.ReadFile(fullPath) //nolint:gosec // G304: Path is constructed from known testdata dir
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, ErrFixtureNotFound

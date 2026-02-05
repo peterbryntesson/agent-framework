@@ -121,7 +121,7 @@ func (f *AgentFactory) Create(ctx context.Context, def *PromptAgent) (agent.Agen
 
 // CreateFromFile loads and creates an agent from a YAML file path.
 func (f *AgentFactory) CreateFromFile(ctx context.Context, path string) (agent.Agent, error) {
-	file, err := os.Open(path)
+	file, err := os.Open(path) //nolint:gosec // G304: User-provided path is the intended use case
 	if err != nil {
 		return nil, fmt.Errorf("opening file: %w", err)
 	}

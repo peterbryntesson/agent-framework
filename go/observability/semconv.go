@@ -12,10 +12,10 @@ const (
 	MetricAgentRuns = "gen_ai.agent.runs"
 
 	// MetricTokensInput is a histogram of input tokens per request.
-	MetricTokensInput = "gen_ai.usage.input_tokens"
+	MetricTokensInput = "gen_ai.usage.input_tokens" //nolint:gosec // G101: Metric name, not credentials
 
 	// MetricTokensOutput is a histogram of output tokens per request.
-	MetricTokensOutput = "gen_ai.usage.output_tokens"
+	MetricTokensOutput = "gen_ai.usage.output_tokens" //nolint:gosec // G101: Metric name, not credentials
 
 	// MetricRequestLatency is a histogram of request latency in seconds.
 	MetricRequestLatency = "gen_ai.request.latency"
@@ -42,13 +42,13 @@ const (
 	GenAIProviderNameKey = "gen_ai.provider.name"
 
 	// GenAIUsageCachedTokensKey is the number of cached tokens.
-	GenAIUsageCachedTokensKey = "gen_ai.usage.cached_tokens"
+	GenAIUsageCachedTokensKey = "gen_ai.usage.cached_tokens" //nolint:gosec // G101: Semantic convention, not credentials
 
 	// GenAIUsageReasoningTokensKey is the number of reasoning tokens.
-	GenAIUsageReasoningTokensKey = "gen_ai.usage.reasoning_tokens"
+	GenAIUsageReasoningTokensKey = "gen_ai.usage.reasoning_tokens" //nolint:gosec // G101: Semantic convention, not credentials
 
 	// GenAIUsageTotalTokensKey is the total number of tokens.
-	GenAIUsageTotalTokensKey = "gen_ai.usage.total_tokens"
+	GenAIUsageTotalTokensKey = "gen_ai.usage.total_tokens" //nolint:gosec // G101: Semantic convention, not credentials
 
 	// GenAIErrorTypeKey identifies the error type.
 	GenAIErrorTypeKey = "gen_ai.error.type"
