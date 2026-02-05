@@ -23,12 +23,12 @@ const (
 
 // Client provides access to Microsoft Purview content policy APIs.
 type Client struct {
-	credential  TokenCredential
-	httpClient  *http.Client
-	baseURL     string
-	tenantID    string
-	cache       ScopeCache
-	cacheTTL    time.Duration
+	credential TokenCredential
+	httpClient *http.Client
+	baseURL    string
+	tenantID   string
+	cache      ScopeCache
+	cacheTTL   time.Duration
 
 	// Token caching
 	tokenMu     sync.RWMutex

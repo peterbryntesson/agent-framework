@@ -106,13 +106,13 @@ type EvaluationResponse struct {
 
 // ViolationResponse is a violation in the API response.
 type ViolationResponse struct {
-	Category    string   `json:"category"`
-	Severity    string   `json:"severity"`
-	Confidence  float64  `json:"confidence"`
-	Description string   `json:"description,omitempty"`
-	StartOffset *int     `json:"startOffset,omitempty"`
-	EndOffset   *int     `json:"endOffset,omitempty"`
-	Text        string   `json:"text,omitempty"`
+	Category    string  `json:"category"`
+	Severity    string  `json:"severity"`
+	Confidence  float64 `json:"confidence"`
+	Description string  `json:"description,omitempty"`
+	StartOffset *int    `json:"startOffset,omitempty"`
+	EndOffset   *int    `json:"endOffset,omitempty"`
+	Text        string  `json:"text,omitempty"`
 }
 
 // ScopeDefinition represents a cached scope definition.

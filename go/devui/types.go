@@ -16,8 +16,8 @@ type AgentInfo struct {
 
 // RunRequest is the request body for running an agent.
 type RunRequest struct {
-	Messages      []MessageInput `json:"messages"`
-	ConversationID string        `json:"conversationId,omitempty"`
+	Messages       []MessageInput `json:"messages"`
+	ConversationID string         `json:"conversationId,omitempty"`
 }
 
 // MessageInput represents an input message.
@@ -28,12 +28,12 @@ type MessageInput struct {
 
 // RunResponse is the response from a non-streaming run.
 type RunResponse struct {
-	ID             string         `json:"id"`
-	ConversationID string         `json:"conversationId"`
-	Content        string         `json:"content"`
-	FinishReason   string         `json:"finishReason,omitempty"`
-	Usage          *UsageInfo     `json:"usage,omitempty"`
-	TraceID        string         `json:"traceId,omitempty"`
+	ID             string     `json:"id"`
+	ConversationID string     `json:"conversationId"`
+	Content        string     `json:"content"`
+	FinishReason   string     `json:"finishReason,omitempty"`
+	Usage          *UsageInfo `json:"usage,omitempty"`
+	TraceID        string     `json:"traceId,omitempty"`
 }
 
 // UsageInfo contains token usage information.
@@ -51,13 +51,13 @@ type StreamEvent struct {
 
 // TraceInfo describes a collected trace.
 type TraceInfo struct {
-	TraceID    string        `json:"traceId"`
-	AgentName  string        `json:"agentName"`
-	StartTime  time.Time     `json:"startTime"`
-	EndTime    time.Time     `json:"endTime,omitempty"`
-	Duration   time.Duration `json:"duration,omitempty"`
-	Status     string        `json:"status"`
-	SpanCount  int           `json:"spanCount"`
+	TraceID   string        `json:"traceId"`
+	AgentName string        `json:"agentName"`
+	StartTime time.Time     `json:"startTime"`
+	EndTime   time.Time     `json:"endTime,omitempty"`
+	Duration  time.Duration `json:"duration,omitempty"`
+	Status    string        `json:"status"`
+	SpanCount int           `json:"spanCount"`
 }
 
 // TraceDetail provides full details of a trace including all spans.

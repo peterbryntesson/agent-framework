@@ -16,10 +16,10 @@ type mockAgent struct {
 	description string
 }
 
-func (m *mockAgent) ID() string                                 { return m.id }
-func (m *mockAgent) Name() string                               { return m.name }
-func (m *mockAgent) Description() string                        { return m.description }
-func (m *mockAgent) Metadata() mockMetadata                     { return mockMetadata{} }
+func (m *mockAgent) ID() string             { return m.id }
+func (m *mockAgent) Name() string           { return m.name }
+func (m *mockAgent) Description() string    { return m.description }
+func (m *mockAgent) Metadata() mockMetadata { return mockMetadata{} }
 
 type mockMetadata struct {
 	ProviderName string
