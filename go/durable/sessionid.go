@@ -28,9 +28,9 @@ func NewSessionID(name, key string) SessionID {
 }
 
 // WorkflowID returns the Temporal workflow ID for this session.
-// The format is "dafx-{name}-{key}" to ensure uniqueness and enable routing.
+// The format is "@dafx-{name}@{key}" to align with cross-platform entity IDs.
 func (id SessionID) WorkflowID() string {
-	return fmt.Sprintf("%s%s-%s", entityNamePrefix, id.Name, id.Key)
+	return fmt.Sprintf("@%s@%s", id.EntityName(), id.Key)
 }
 
 // EntityName returns the entity name portion used in the workflow ID.
@@ -39,33 +39,52 @@ func (id SessionID) EntityName() string {
 	return entityNamePrefix + id.Name
 }
 
-// ParseSessionID parses a workflow ID back to a SessionID.
-// Returns an error if the workflow ID format is invalid.
-func ParseSessionID(workflowID string) (SessionID, error) {
-	if !strings.HasPrefix(workflowID, entityNamePrefix) {
-		return SessionID{}, fmt.Errorf("invalid workflow ID format: missing prefix %q", entityNamePrefix)
+// ParseSessionID parses a session ID string back to a SessionID.
+// Supported formats:
+// - "@name@key" (preferred session ID format)
+// - "@dafx-name@key" (entity workflow ID format)
+// - "dafx-name-key" (legacy workflow ID format)
+func ParseSessionID(sessionID string) (SessionID, error) {
+	if strings.HasPrefix(sessionID, "@") {
+		parts := strings.SplitN(sessionID[1:], "@", 2)
+		if len(parts) != 2 {
+			return SessionID{}, fmt.Errorf("invalid session ID format: missing separator")
+		}
+		name := parts[0]
+		key := parts[1]
+		if name == "" || key == "" {
+			return SessionID{}, fmt.Errorf("invalid session ID format: empty name or key")
+		}
+		if strings.HasPrefix(name, entityNamePrefix) {
+			name = strings.TrimPrefix(name, entityNamePrefix)
+		}
+		return SessionID{Name: name, Key: key}, nil
 	}
 
-	rest := strings.TrimPrefix(workflowID, entityNamePrefix)
+	if !strings.HasPrefix(sessionID, entityNamePrefix) {
+		return SessionID{}, fmt.Errorf("invalid session ID format: missing prefix %q", entityNamePrefix)
+	}
+
+	rest := strings.TrimPrefix(sessionID, entityNamePrefix)
 	idx := strings.Index(rest, "-")
 	if idx < 0 {
-		return SessionID{}, fmt.Errorf("invalid workflow ID format: missing separator")
+		return SessionID{}, fmt.Errorf("invalid session ID format: missing separator")
 	}
 
 	name := rest[:idx]
 	key := rest[idx+1:]
 
 	if name == "" || key == "" {
-		return SessionID{}, fmt.Errorf("invalid workflow ID format: empty name or key")
+		return SessionID{}, fmt.Errorf("invalid session ID format: empty name or key")
 	}
 
 	return SessionID{Name: name, Key: key}, nil
 }
 
 // String returns the string representation of the session ID.
-// This is the same as WorkflowID() for compatibility.
+// The format is "@name@key".
 func (id SessionID) String() string {
-	return id.WorkflowID()
+	return fmt.Sprintf("@%s@%s", id.Name, id.Key)
 }
 
 // IsZero returns true if this session ID is uninitialized.

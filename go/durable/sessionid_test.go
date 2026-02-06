@@ -21,7 +21,7 @@ func TestSessionID_WorkflowID(t *testing.T) {
 
 	workflowID := sessionID.WorkflowID()
 
-	assert.Equal(t, "dafx-my-agent-user-123", workflowID)
+	assert.Equal(t, "@dafx-my-agent@user-123", workflowID)
 }
 
 func TestSessionID_EntityName(t *testing.T) {
@@ -33,31 +33,47 @@ func TestSessionID_EntityName(t *testing.T) {
 }
 
 func TestParseSessionID(t *testing.T) {
-	t.Run("valid workflow ID", func(t *testing.T) {
-		sessionID, err := ParseSessionID("dafx-myagent-user123")
+	t.Run("valid session ID", func(t *testing.T) {
+		sessionID, err := ParseSessionID("@myagent@user123")
 
 		require.NoError(t, err)
 		assert.Equal(t, "myagent", sessionID.Name)
 		assert.Equal(t, "user123", sessionID.Key)
 	})
 
-	t.Run("workflow ID with dashes in key", func(t *testing.T) {
-		sessionID, err := ParseSessionID("dafx-agent-user-123-extra")
+	t.Run("session ID with dashes in key", func(t *testing.T) {
+		sessionID, err := ParseSessionID("@agent@user-123-extra")
 
 		require.NoError(t, err)
 		assert.Equal(t, "agent", sessionID.Name)
 		assert.Equal(t, "user-123-extra", sessionID.Key)
 	})
 
+	t.Run("entity workflow ID format", func(t *testing.T) {
+		sessionID, err := ParseSessionID("@dafx-agent@user123")
+
+		require.NoError(t, err)
+		assert.Equal(t, "agent", sessionID.Name)
+		assert.Equal(t, "user123", sessionID.Key)
+	})
+
+	t.Run("legacy workflow ID format", func(t *testing.T) {
+		sessionID, err := ParseSessionID("dafx-agent-user123")
+
+		require.NoError(t, err)
+		assert.Equal(t, "agent", sessionID.Name)
+		assert.Equal(t, "user123", sessionID.Key)
+	})
+
 	t.Run("invalid prefix", func(t *testing.T) {
-		_, err := ParseSessionID("invalid-workflow-id")
+		_, err := ParseSessionID("invalid-session-id")
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "missing prefix")
 	})
 
 	t.Run("missing separator", func(t *testing.T) {
-		_, err := ParseSessionID("dafx-nokey")
+		_, err := ParseSessionID("@nokey")
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "missing separator")
@@ -74,7 +90,7 @@ func TestParseSessionID(t *testing.T) {
 func TestSessionID_String(t *testing.T) {
 	sessionID := NewSessionID("my-agent", "user-123")
 
-	assert.Equal(t, "dafx-my-agent-user-123", sessionID.String())
+	assert.Equal(t, "@my-agent@user-123", sessionID.String())
 }
 
 func TestSessionID_IsZero(t *testing.T) {
@@ -126,7 +142,7 @@ func TestSessionID_JSONSerialization(t *testing.T) {
 	// Marshal
 	data, err := sessionID.MarshalJSON()
 	require.NoError(t, err)
-	assert.Equal(t, `"dafx-myagent-user123"`, string(data))
+	assert.Equal(t, `"@myagent@user123"`, string(data))
 
 	// Unmarshal
 	var restored SessionID
@@ -142,7 +158,7 @@ func TestSessionID_TextMarshaling(t *testing.T) {
 	// MarshalText
 	data, err := sessionID.MarshalText()
 	require.NoError(t, err)
-	assert.Equal(t, "dafx-myagent-user123", string(data))
+	assert.Equal(t, "@myagent@user123", string(data))
 
 	// UnmarshalText
 	var restored SessionID

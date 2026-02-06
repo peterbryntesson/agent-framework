@@ -114,6 +114,9 @@ type ResponseEntry struct {
 
 	// Usage contains token usage statistics.
 	Usage *UsageInfo `json:"usage,omitempty"`
+
+	// IsError indicates whether this response represents an error.
+	IsError bool `json:"isError,omitempty"`
 }
 
 // EntryType returns "response".
@@ -197,7 +200,7 @@ func (m *StateMessage) ToChatMessage() chat.Message {
 			toolCalls = append(toolCalls, chat.ToolCall{
 				ID:        c.CallID,
 				Name:      c.FunctionName,
-				Arguments: json.RawMessage(c.Arguments),
+				Arguments: c.Arguments,
 			})
 		}
 	}
@@ -237,7 +240,7 @@ func FromChatMessage(msg chat.Message) StateMessage {
 			Type:         ContentTypeFunctionCall,
 			CallID:       tc.ID,
 			FunctionName: tc.Name,
-			Arguments:    string(tc.Arguments),
+			Arguments:    tc.Arguments,
 		})
 	}
 
@@ -284,8 +287,8 @@ type ContentItem struct {
 	// FunctionName is the name of the function (for "functionCall" type).
 	FunctionName string `json:"name,omitempty"`
 
-	// Arguments is the JSON arguments string (for "functionCall" type).
-	Arguments string `json:"arguments,omitempty"`
+	// Arguments is the JSON arguments payload (for "functionCall" type).
+	Arguments json.RawMessage `json:"arguments,omitempty"`
 
 	// Result is the function result (for "functionResult" type).
 	Result json.RawMessage `json:"result,omitempty"`
@@ -308,6 +311,9 @@ type ContentItem struct {
 	// ErrorCode is the error code (for "error" type).
 	ErrorCode string `json:"errorCode,omitempty"`
 
+	// ErrorDetails is additional error details (for "error" type).
+	ErrorDetails string `json:"details,omitempty"`
+
 	// Usage is the token usage info (for "usage" type).
 	Usage *UsageInfo `json:"usage,omitempty"`
 
@@ -323,12 +329,24 @@ func (c *ContentItem) ToChatContent() chat.Content {
 	case ContentTypeReasoning:
 		// Reasoning is represented as text in the chat package
 		return chat.NewTextContent(c.Text)
+	case ContentTypeData:
+		if c.URI == "" {
+			return nil
+		}
+		return chat.NewImageContentFromBase64(c.URI, c.MediaType)
+	case ContentTypeURI:
+		if c.URI == "" {
+			return nil
+		}
+		image := chat.NewImageContentFromURL(c.URI)
+		image.MediaType = c.MediaType
+		return image
 	case ContentTypeFunctionResult:
 		return chat.NewToolResultContent(c.CallID, string(c.Result))
 	// For types that don't have a direct chat.Content equivalent,
 	// we return nil and handle them separately
 	case ContentTypeFunctionCall, ContentTypeHostedFile, ContentTypeHostedVectorStore,
-		ContentTypeUsage, ContentTypeUnknown, ContentTypeData, ContentTypeURI, ContentTypeError:
+		ContentTypeUsage, ContentTypeUnknown, ContentTypeError:
 		return nil
 	default:
 		return nil
@@ -354,7 +372,13 @@ func FromChatContent(c chat.Content) *ContentItem {
 			Result: json.RawMessage(v.Content),
 		}
 	case *chat.ImageContent:
-		// Convert image content to data type
+		if v.URL != "" {
+			return &ContentItem{
+				Type:      ContentTypeURI,
+				URI:       v.URL,
+				MediaType: v.MediaType,
+			}
+		}
 		return &ContentItem{
 			Type:      ContentTypeData,
 			URI:       v.Base64Data,
@@ -365,7 +389,7 @@ func FromChatContent(c chat.Content) *ContentItem {
 			Type:         ContentTypeFunctionCall,
 			CallID:       v.ToolCall.ID,
 			FunctionName: v.ToolCall.Name,
-			Arguments:    string(v.ToolCall.Arguments),
+			Arguments:    v.ToolCall.Arguments,
 		}
 	default:
 		// Serialize unknown content types

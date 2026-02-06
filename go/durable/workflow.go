@@ -3,7 +3,9 @@
 package durable
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/temporal"
@@ -36,8 +38,23 @@ type RunRequest struct {
 	// ResponseType is the expected response type (e.g., "text", "json").
 	ResponseType string `json:"responseType,omitempty"`
 
+	// ResponseSchema defines the expected structure if ResponseType is "json".
+	ResponseSchema json.RawMessage `json:"responseSchema,omitempty"`
+
 	// OrchestrationID is the ID of the calling orchestration.
 	OrchestrationID string `json:"orchestrationId,omitempty"`
+
+	// CreatedAt is the optional timestamp when this request was created.
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
+
+	// EnableToolCalls indicates whether tool calls are enabled for this run.
+	EnableToolCalls bool `json:"enableToolCalls,omitempty"`
+
+	// WaitForResponse indicates whether the caller is waiting for a response.
+	WaitForResponse bool `json:"waitForResponse,omitempty"`
+
+	// Options contains additional options forwarded to the agent.
+	Options map[string]interface{} `json:"options,omitempty"`
 }
 
 // RunResponse is the result of the Run workflow update.
@@ -107,6 +124,12 @@ func SessionWorkflow(ctx workflow.Context, input WorkflowInput) error {
 		return err
 	}
 
+	if err := workflow.SetQueryHandler(ctx, GetHistoryQuery, func() (*State, error) {
+		return state.Clone(), nil
+	}); err != nil {
+		return err
+	}
+
 	// Wait for TTL expiration or continue-as-new condition
 	for {
 		// Check if we need to continue-as-new
@@ -171,6 +194,10 @@ func handleRunUpdate(
 		CorrelationID:   req.CorrelationID,
 		OrchestrationID: req.OrchestrationID,
 		ResponseType:    req.ResponseType,
+		ResponseSchema:  req.ResponseSchema,
+	}
+	if req.CreatedAt != nil {
+		requestEntry.Timestamp = *req.CreatedAt
 	}
 	state.AppendRequest(requestEntry)
 
@@ -179,8 +206,10 @@ func handleRunUpdate(
 
 	// Execute the agent activity
 	activityInput := ActivityInput{
-		SessionID: sessionID,
-		Messages:  allMessages,
+		SessionID:       sessionID,
+		Messages:        allMessages,
+		Options:         req.Options,
+		EnableToolCalls: req.EnableToolCalls,
 	}
 
 	activityOpts := workflow.ActivityOptions{
@@ -195,7 +224,13 @@ func handleRunUpdate(
 	err := workflow.ExecuteActivity(ctx, RunAgentActivityName, activityInput).Get(ctx, &activityResult)
 	if err != nil {
 		logger.Error("Activity failed", "error", err)
+		state.AppendResponse(newErrorResponseEntry(workflow.Now(ctx), req.CorrelationID, err))
 		return RunResponse{Error: err.Error()}, nil
+	}
+
+	if activityResult.Error != "" {
+		state.AppendResponse(newErrorResponseEntry(workflow.Now(ctx), req.CorrelationID, errors.New(activityResult.Error)))
+		return RunResponse{Error: activityResult.Error}, nil
 	}
 
 	// Add response to conversation history
@@ -218,6 +253,27 @@ func handleRunUpdate(
 		Messages: activityResult.Messages,
 		Usage:    activityResult.Usage,
 	}, nil
+}
+
+func newErrorResponseEntry(timestamp time.Time, correlationID string, err error) *ResponseEntry {
+	message := StateMessage{
+		Role: "assistant",
+		Contents: []ContentItem{
+			{
+				Type:         ContentTypeError,
+				ErrorMessage: err.Error(),
+				ErrorCode:    fmt.Sprintf("%T", err),
+			},
+		},
+	}
+
+	return &ResponseEntry{
+		Type:          "response",
+		Timestamp:     timestamp,
+		Messages:      []StateMessage{message},
+		CorrelationID: correlationID,
+		IsError:       true,
+	}
 }
 
 // GetHistoryQuery is a query to retrieve the conversation history.

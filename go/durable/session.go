@@ -26,6 +26,11 @@ type Session struct {
 	mu sync.RWMutex
 }
 
+type sessionPayload struct {
+	DurableSessionID string `json:"durable_session_id,omitempty"`
+	State
+}
+
 // NewSession creates a new durable session with the given session ID.
 func NewSession(sessionID SessionID) *Session {
 	return &Session{
@@ -92,7 +97,12 @@ func (s *Session) Serialize() (json.RawMessage, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return json.Marshal(s.state)
+	payload := sessionPayload{State: *s.state}
+	if !s.sessionID.IsZero() {
+		payload.DurableSessionID = s.sessionID.String()
+	}
+
+	return json.Marshal(payload)
 }
 
 // GetService retrieves a service of the specified type from the session.
@@ -144,9 +154,23 @@ func (s *Session) MessageCount() int {
 
 // RestoreSession deserializes a durable session from JSON data.
 func RestoreSession(sessionID SessionID, data json.RawMessage) (*Session, error) {
-	var state State
-	if err := json.Unmarshal(data, &state); err != nil {
+	var payload sessionPayload
+	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, err
 	}
-	return NewSessionWithState(sessionID, &state), nil
+
+	resolvedID := sessionID
+	if !sessionID.IsZero() {
+		return NewSessionWithState(resolvedID, &payload.State), nil
+	}
+
+	if payload.DurableSessionID != "" {
+		parsed, err := ParseSessionID(payload.DurableSessionID)
+		if err != nil {
+			return nil, err
+		}
+		resolvedID = parsed
+	}
+
+	return NewSessionWithState(resolvedID, &payload.State), nil
 }

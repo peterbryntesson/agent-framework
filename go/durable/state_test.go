@@ -70,6 +70,32 @@ func TestState_BuildChatMessages(t *testing.T) {
 	assert.Equal(t, chat.RoleAssistant, messages[1].Role)
 }
 
+func TestState_BuildChatMessages_SkipsErrorResponses(t *testing.T) {
+	state := NewState()
+
+	state.AppendRequest(NewRequestEntry([]chat.Message{chat.NewUserMessage("Hello")}))
+	state.AppendResponse(&ResponseEntry{
+		Type:      "response",
+		Timestamp: time.Now().UTC(),
+		Messages: []StateMessage{
+			{
+				Role: "assistant",
+				Contents: []ContentItem{
+					{Type: ContentTypeText, Text: "Error response"},
+				},
+			},
+		},
+		IsError: true,
+	})
+	state.AppendResponse(NewResponseEntry([]chat.Message{chat.NewAssistantMessage("Hi")}))
+
+	messages := state.BuildChatMessages()
+
+	assert.Len(t, messages, 2)
+	assert.Equal(t, chat.RoleUser, messages[0].Role)
+	assert.Equal(t, chat.RoleAssistant, messages[1].Role)
+}
+
 func TestState_SetExpiration(t *testing.T) {
 	state := NewState()
 	expTime := time.Now().Add(1 * time.Hour)

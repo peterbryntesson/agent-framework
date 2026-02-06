@@ -185,7 +185,7 @@ func TestStateMessage_ToChatMessage(t *testing.T) {
 					Type:         ContentTypeFunctionCall,
 					CallID:       "call_456",
 					FunctionName: "search",
-					Arguments:    `{"query":"test"}`,
+					Arguments:    json.RawMessage(`{"query":"test"}`),
 				},
 			},
 		}
@@ -196,6 +196,7 @@ func TestStateMessage_ToChatMessage(t *testing.T) {
 		require.Len(t, msg.ToolCalls, 1)
 		assert.Equal(t, "call_456", msg.ToolCalls[0].ID)
 		assert.Equal(t, "search", msg.ToolCalls[0].Name)
+		assert.JSONEq(t, `{"query":"test"}`, string(msg.ToolCalls[0].Arguments))
 	})
 
 	t.Run("message with author name", func(t *testing.T) {

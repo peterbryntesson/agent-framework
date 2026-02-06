@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/microsoft/agent-framework-go/agent"
+	"github.com/microsoft/agent-framework-go/chat"
 	"go.temporal.io/sdk/client"
 )
 
@@ -105,12 +106,20 @@ func (a *Agent) Run(ctx context.Context, messages []agent.Message, opts ...agent
 	cfg := agent.ApplyRunOptions(opts...)
 
 	// Extract session ID from config metadata or generate new one
-	sessionID, ok := getDurableSessionID(cfg)
+	sessionID, ok := getDurableSessionID(cfg, a.name)
 	if !ok {
 		sessionID = SessionID{
 			Name: a.name,
 			Key:  uuid.New().String(),
 		}
+	}
+	requestOptions := getDurableRunRequestOptions(cfg)
+	if requestOptions.CorrelationID == "" {
+		requestOptions.CorrelationID = uuid.New().String()
+	}
+	if requestOptions.CreatedAt == nil {
+		now := time.Now().UTC()
+		requestOptions.CreatedAt = &now
 	}
 
 	// Convert messages to state messages
@@ -137,14 +146,38 @@ func (a *Agent) Run(ctx context.Context, messages []agent.Message, opts ...agent
 	}
 
 	// Send the run request via workflow update
+	updateStage := client.WorkflowUpdateStageCompleted
+	if !requestOptions.WaitForReply {
+		updateStage = client.WorkflowUpdateStageAccepted
+	}
+
 	updateHandle, err := a.temporalClient.UpdateWorkflow(ctx, client.UpdateWorkflowOptions{
-		WorkflowID:   workflowID,
-		UpdateName:   UpdateNameRun,
-		Args:         []interface{}{RunRequest{Messages: stateMessages}},
-		WaitForStage: client.WorkflowUpdateStageCompleted,
+		WorkflowID: workflowID,
+		UpdateName: UpdateNameRun,
+		Args: []interface{}{RunRequest{
+			Messages:        stateMessages,
+			CorrelationID:   requestOptions.CorrelationID,
+			ResponseType:    requestOptions.ResponseType,
+			ResponseSchema:  requestOptions.ResponseSchema,
+			OrchestrationID: requestOptions.Orchestration,
+			CreatedAt:       requestOptions.CreatedAt,
+			WaitForResponse: requestOptions.WaitForReply,
+			EnableToolCalls: requestOptions.EnableTools,
+			Options:         requestOptions.Options,
+		}},
+		WaitForStage: updateStage,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to send run update: %w", err)
+	}
+
+	if !requestOptions.WaitForReply {
+		return &agent.Response{
+			Messages: []agent.Message{chat.NewSystemMessage(
+				fmt.Sprintf("Request accepted for processing (correlation_id: %s).", requestOptions.CorrelationID),
+			)},
+			CreatedAt: time.Now(),
+		}, nil
 	}
 
 	// Wait for the response
@@ -200,11 +233,21 @@ func (a *Agent) NewSession(ctx context.Context) (agent.Session, error) {
 
 // RestoreSession deserializes a previously saved session from JSON data.
 func (a *Agent) RestoreSession(ctx context.Context, data json.RawMessage) (agent.Session, error) {
-	var session Session
-	if err := json.Unmarshal(data, &session.state); err != nil {
+	var payload sessionPayload
+	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal session: %w", err)
 	}
-	return &session, nil
+
+	resolvedID := SessionID{}
+	if payload.DurableSessionID != "" {
+		parsed, err := ParseSessionID(payload.DurableSessionID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse session ID: %w", err)
+		}
+		resolvedID = parsed
+	}
+
+	return NewSessionWithState(resolvedID, &payload.State), nil
 }
 
 // GetService retrieves a service of the specified type from the agent.

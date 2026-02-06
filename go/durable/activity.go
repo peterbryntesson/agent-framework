@@ -21,6 +21,12 @@ type ActivityInput struct {
 
 	// Messages is the complete conversation history to pass to the agent.
 	Messages []chat.Message `json:"messages"`
+
+	// Options contains additional options forwarded to the agent.
+	Options map[string]interface{} `json:"options,omitempty"`
+
+	// EnableToolCalls indicates whether tool calls are enabled for this run.
+	EnableToolCalls bool `json:"enableToolCalls,omitempty"`
 }
 
 // ActivityResult is the result of the RunAgentActivity.
@@ -75,7 +81,19 @@ func RunAgentActivity(ctx context.Context, input ActivityInput) (ActivityResult,
 	}
 
 	// agent.Message is an alias for chat.Message, so we can pass directly
-	response, err := actCtx.Agent.Run(ctx, input.Messages)
+	runOptions := make([]agent.RunOption, 0, 1)
+	if len(input.Options) > 0 || !input.EnableToolCalls {
+		metadata := make(map[string]interface{}, len(input.Options)+1)
+		for key, value := range input.Options {
+			metadata[key] = value
+		}
+		if !input.EnableToolCalls {
+			metadata["enable_tool_calls"] = false
+		}
+		runOptions = append(runOptions, agent.WithMetadata(metadata))
+	}
+
+	response, err := actCtx.Agent.Run(ctx, input.Messages, runOptions...)
 	if err != nil {
 		logger.Error("Agent execution failed", "error", err)
 		return ActivityResult{Error: err.Error()}, err

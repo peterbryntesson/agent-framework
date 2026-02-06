@@ -97,6 +97,7 @@ func TestSession_Serialize(t *testing.T) {
 	err = json.Unmarshal(data, &parsed)
 	require.NoError(t, err)
 	assert.Equal(t, SchemaVersion, parsed["schemaVersion"])
+	assert.Equal(t, "@agent@key", parsed["durable_session_id"])
 }
 
 func TestSession_State(t *testing.T) {

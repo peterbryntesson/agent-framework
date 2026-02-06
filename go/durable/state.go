@@ -111,6 +111,9 @@ func (s *State) AppendResponse(entry *ResponseEntry) {
 func (s *State) BuildChatMessages() []chat.Message {
 	var messages []chat.Message
 	for _, entry := range s.Data.ConversationHistory {
+		if response, ok := entry.(*ResponseEntry); ok && response.IsError {
+			continue
+		}
 		entryMessages := entry.ToChatMessages()
 		messages = append(messages, entryMessages...)
 	}
