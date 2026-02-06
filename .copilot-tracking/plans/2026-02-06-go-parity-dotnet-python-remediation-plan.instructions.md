@@ -44,12 +44,12 @@ Use this plan to address parity gaps identified in the review for Go Epic 5 pari
 
 ### Phase 2: MCP parity and transport reliability
 
-* [ ] Add WebSocket MCP transport for parity with Python tooling
-* [ ] Implement prompt, logging, and sampling support in client and server
-* [ ] Implement SSE endpoint or adjust transport pathing to avoid dead /sse usage
-* [ ] Add single-reader demultiplexing for stdio transport
-* [ ] Add hosted MCP tool support or document parity decision
-* [ ] Fix MCP HTTP transport documentation example to avoid /sse duplication
+* [x] Add WebSocket MCP transport for parity with Python tooling
+* [x] Implement prompt, logging, and sampling support in client and server
+* [x] Implement SSE endpoint or adjust transport pathing to avoid dead /sse usage
+* [x] Add single-reader demultiplexing for stdio transport
+* [x] Add hosted MCP tool support or document parity decision
+* [x] Fix MCP HTTP transport documentation example to avoid /sse duplication
 
 ### Phase 3: Declarative agent parity
 

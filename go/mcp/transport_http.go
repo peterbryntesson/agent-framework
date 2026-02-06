@@ -20,10 +20,11 @@ import (
 // This transport uses HTTP POST for JSON-RPC requests and
 // Server-Sent Events (SSE) for receiving notifications.
 type HTTPTransport struct {
-	endpoint   string
-	httpClient *http.Client
-	headers    http.Header
-	config     *transportConfig
+	endpoint    string
+	sseEndpoint string
+	httpClient  *http.Client
+	headers     http.Header
+	config      *transportConfig
 
 	mu            sync.Mutex
 	started       bool
@@ -40,8 +41,18 @@ type HTTPTransportOption func(*HTTPTransport)
 // NewHTTPTransport creates a transport for an HTTP-based MCP server.
 // The endpoint is the base URL of the MCP server.
 func NewHTTPTransport(endpoint string, opts ...HTTPTransportOption) *HTTPTransport {
+	trimmedEndpoint := strings.TrimSuffix(endpoint, "/")
+	postEndpoint := trimmedEndpoint
+	sseEndpoint := trimmedEndpoint + "/sse"
+	if strings.HasSuffix(trimmedEndpoint, "/sse") {
+		postEndpoint = strings.TrimSuffix(trimmedEndpoint, "/sse")
+		postEndpoint = strings.TrimSuffix(postEndpoint, "/")
+		sseEndpoint = trimmedEndpoint
+	}
+
 	t := &HTTPTransport{
-		endpoint:      strings.TrimSuffix(endpoint, "/"),
+		endpoint:      postEndpoint,
+		sseEndpoint:   sseEndpoint,
 		headers:       make(http.Header),
 		config:        defaultTransportConfig(),
 		closedCh:      make(chan struct{}),
@@ -92,6 +103,13 @@ func WithHTTPHeader(key, value string) HTTPTransportOption {
 	}
 }
 
+// WithSSEEndpoint sets a custom SSE endpoint for notifications.
+func WithSSEEndpoint(endpoint string) HTTPTransportOption {
+	return func(t *HTTPTransport) {
+		t.sseEndpoint = strings.TrimSuffix(endpoint, "/")
+	}
+}
+
 // WithHTTPTimeout sets the timeout for HTTP requests.
 func WithHTTPTimeout(opts ...TransportOption) HTTPTransportOption {
 	return func(t *HTTPTransport) {
@@ -137,7 +155,7 @@ func (t *HTTPTransport) connectSSE() {
 	t.sseCancel = cancel
 	t.mu.Unlock()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, t.endpoint+"/sse", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, t.sseEndpoint, nil)
 	if err != nil {
 		return
 	}

@@ -26,7 +26,8 @@ type ClientOption func(*clientConfig)
 
 // clientConfig holds client configuration options.
 type clientConfig struct {
-	clientInfo Implementation
+	clientInfo   Implementation
+	capabilities ClientCapabilities
 }
 
 // defaultClientConfig returns the default client configuration.
@@ -36,6 +37,7 @@ func defaultClientConfig() *clientConfig {
 			Name:    "agent-framework-go",
 			Version: "1.0.0",
 		},
+		capabilities: ClientCapabilities{},
 	}
 }
 
@@ -46,6 +48,13 @@ func WithClientInfo(name, version string) ClientOption {
 			Name:    name,
 			Version: version,
 		}
+	}
+}
+
+// WithClientCapabilities sets client capabilities sent during initialization.
+func WithClientCapabilities(capabilities ClientCapabilities) ClientOption {
+	return func(c *clientConfig) {
+		c.capabilities = capabilities
 	}
 }
 
@@ -82,7 +91,7 @@ func NewClient(ctx context.Context, transport Transport, opts ...ClientOption) (
 func (c *Client) initialize(ctx context.Context) error {
 	params := InitializeParams{
 		ProtocolVersion: ProtocolVersion,
-		Capabilities:    ClientCapabilities{},
+		Capabilities:    cfg.capabilities,
 		ClientInfo:      c.clientInfo,
 	}
 
@@ -290,6 +299,141 @@ func (c *Client) ReadResource(ctx context.Context, uri string) (*ResourceContent
 	}
 
 	return &result.Contents[0], nil
+}
+
+// ListPrompts returns the available prompts from the MCP server.
+func (c *Client) ListPrompts(ctx context.Context) ([]PromptInfo, error) {
+	if err := c.checkInitialized(); err != nil {
+		return nil, err
+	}
+
+	req := &Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      nextRequestID(),
+		Method:  "prompts/list",
+	}
+
+	resp, err := c.transport.Send(ctx, req)
+	if err != nil {
+		return nil, NewMCPError("prompts/list", err)
+	}
+
+	if resp.Error != nil {
+		return nil, NewMCPError("prompts/list", resp.Error)
+	}
+
+	var result ListPromptsResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		return nil, NewMCPError("prompts/list", err)
+	}
+
+	return result.Prompts, nil
+}
+
+// GetPrompt returns a prompt template by name.
+func (c *Client) GetPrompt(ctx context.Context, name string, arguments map[string]string) (*Prompt, error) {
+	if err := c.checkInitialized(); err != nil {
+		return nil, err
+	}
+
+	params := GetPromptParams{
+		Name:      name,
+		Arguments: arguments,
+	}
+
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return nil, NewMCPError("prompts/get", err)
+	}
+
+	req := &Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      nextRequestID(),
+		Method:  "prompts/get",
+		Params:  paramsJSON,
+	}
+
+	resp, err := c.transport.Send(ctx, req)
+	if err != nil {
+		return nil, NewMCPError("prompts/get", err)
+	}
+
+	if resp.Error != nil {
+		return nil, NewMCPError("prompts/get", resp.Error)
+	}
+
+	var result GetPromptResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		return nil, NewMCPError("prompts/get", err)
+	}
+
+	return &result.Prompt, nil
+}
+
+// SetLoggingLevel requests the server to change its logging level.
+func (c *Client) SetLoggingLevel(ctx context.Context, level LoggingLevel) error {
+	if err := c.checkInitialized(); err != nil {
+		return err
+	}
+
+	params := LoggingSetLevelParams{Level: level}
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return NewMCPError("logging/setLevel", err)
+	}
+
+	req := &Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      nextRequestID(),
+		Method:  "logging/setLevel",
+		Params:  paramsJSON,
+	}
+
+	resp, err := c.transport.Send(ctx, req)
+	if err != nil {
+		return NewMCPError("logging/setLevel", err)
+	}
+
+	if resp.Error != nil {
+		return NewMCPError("logging/setLevel", resp.Error)
+	}
+
+	return nil
+}
+
+// CreateMessage requests sampling from the MCP server.
+func (c *Client) CreateMessage(ctx context.Context, params CreateMessageParams) (*CreateMessageResult, error) {
+	if err := c.checkInitialized(); err != nil {
+		return nil, err
+	}
+
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return nil, NewMCPError("sampling/createMessage", err)
+	}
+
+	req := &Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      nextRequestID(),
+		Method:  "sampling/createMessage",
+		Params:  paramsJSON,
+	}
+
+	resp, err := c.transport.Send(ctx, req)
+	if err != nil {
+		return nil, NewMCPError("sampling/createMessage", err)
+	}
+
+	if resp.Error != nil {
+		return nil, NewMCPError("sampling/createMessage", resp.Error)
+	}
+
+	var result CreateMessageResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		return nil, NewMCPError("sampling/createMessage", err)
+	}
+
+	return &result, nil
 }
 
 // ServerInfo returns the server's implementation info.

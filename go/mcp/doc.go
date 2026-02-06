@@ -12,7 +12,7 @@ MCP defines a standard way for AI agents to:
 
 # Protocol Overview
 
-MCP uses JSON-RPC 2.0 over various transports (stdio, HTTP with SSE) to enable
+MCP uses JSON-RPC 2.0 over various transports (stdio, HTTP with SSE, WebSocket) to enable
 communication between clients and servers. The protocol supports tool discovery,
 invocation, resource access, and capability negotiation.
 
@@ -53,7 +53,7 @@ Connect to an MCP server using stdio transport (e.g., spawning a process):
 
 Connect to an MCP server using HTTP transport:
 
-	transport := mcp.NewHTTPTransport("https://mcp.example.com/sse")
+	transport := mcp.NewHTTPTransport("https://mcp.example.com/mcp")
 	client, err := mcp.NewClient(transport,
 	    mcp.WithClientInfo("my-agent", "1.0.0"),
 	)
@@ -92,6 +92,14 @@ Expose agent capabilities as an MCP server:
 
 	// Or serve via HTTP
 	http.Handle("/mcp", server.HTTPHandler())
+	http.Handle("/mcp/sse", server.SSEHandler())
+
+# Hosted MCP Tools
+
+You can also use hosted MCP tools with the agent framework tool helpers:
+
+	hostedTool := tool.NewHostedMCPTool("github", "https://api.githubcopilot.com/mcp/")
+	_ = hostedTool
 
 # Protocol Version
 

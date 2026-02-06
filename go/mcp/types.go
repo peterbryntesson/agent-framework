@@ -129,6 +129,30 @@ type PromptArgument struct {
 	Required bool `json:"required,omitempty"`
 }
 
+// PromptMessage describes a prompt message template.
+type PromptMessage struct {
+	// Role is the chat role for the message.
+	Role string `json:"role"`
+
+	// Content is the message content.
+	Content []Content `json:"content"`
+}
+
+// Prompt describes a prompt template with messages.
+type Prompt struct {
+	// Name is the unique identifier for this prompt.
+	Name string `json:"name"`
+
+	// Description is a human-readable description of the prompt.
+	Description string `json:"description,omitempty"`
+
+	// Arguments describes the prompt's arguments.
+	Arguments []PromptArgument `json:"arguments,omitempty"`
+
+	// Messages defines the prompt template messages.
+	Messages []PromptMessage `json:"messages,omitempty"`
+}
+
 // Implementation describes the client or server implementation.
 type Implementation struct {
 	// Name is the implementation name.
@@ -194,6 +218,36 @@ type ToolsCapability struct {
 
 // LoggingCapability describes logging capabilities.
 type LoggingCapability struct{}
+
+// LoggingLevel defines the logging level for MCP logging messages.
+type LoggingLevel string
+
+// LoggingLevel constants.
+const (
+	LoggingLevelDebug     LoggingLevel = "debug"
+	LoggingLevelInfo      LoggingLevel = "info"
+	LoggingLevelNotice    LoggingLevel = "notice"
+	LoggingLevelWarning   LoggingLevel = "warning"
+	LoggingLevelError     LoggingLevel = "error"
+	LoggingLevelCritical  LoggingLevel = "critical"
+	LoggingLevelAlert     LoggingLevel = "alert"
+	LoggingLevelEmergency LoggingLevel = "emergency"
+)
+
+// LoggingMessageNotificationParams describes a logging notification.
+type LoggingMessageNotificationParams struct {
+	// Level is the logging severity.
+	Level LoggingLevel `json:"level"`
+
+	// Data is the logging payload.
+	Data json.RawMessage `json:"data,omitempty"`
+}
+
+// LoggingSetLevelParams describes a request to set server logging level.
+type LoggingSetLevelParams struct {
+	// Level is the desired logging level.
+	Level LoggingLevel `json:"level"`
+}
 
 // InitializeParams contains initialization parameters from the client.
 type InitializeParams struct {
@@ -311,6 +365,59 @@ type ReadResourceResult struct {
 type ListPromptsResult struct {
 	Prompts    []PromptInfo `json:"prompts"`
 	NextCursor string       `json:"nextCursor,omitempty"`
+}
+
+// GetPromptParams are the parameters for prompts/get.
+type GetPromptParams struct {
+	// Name is the prompt identifier.
+	Name string `json:"name"`
+
+	// Arguments are prompt arguments supplied by the caller.
+	Arguments map[string]string `json:"arguments,omitempty"`
+}
+
+// GetPromptResult is the result of prompts/get.
+type GetPromptResult struct {
+	Prompt Prompt `json:"prompt"`
+}
+
+// SamplingMessage describes a message for sampling.
+type SamplingMessage struct {
+	// Role is the role of the message.
+	Role string `json:"role"`
+
+	// Content contains the message content.
+	Content []Content `json:"content"`
+}
+
+// CreateMessageParams are the parameters for sampling/createMessage.
+type CreateMessageParams struct {
+	// Messages are the input messages for sampling.
+	Messages []SamplingMessage `json:"messages"`
+
+	// Model is the requested model identifier.
+	Model string `json:"model,omitempty"`
+
+	// Temperature controls response randomness.
+	Temperature *float64 `json:"temperature,omitempty"`
+
+	// MaxTokens limits the response token count.
+	MaxTokens *int `json:"maxTokens,omitempty"`
+
+	// StopSequences terminate generation when matched.
+	StopSequences []string `json:"stopSequences,omitempty"`
+}
+
+// CreateMessageResult is the result of sampling/createMessage.
+type CreateMessageResult struct {
+	// Role is the role of the generated message.
+	Role string `json:"role"`
+
+	// Content is the generated content.
+	Content Content `json:"content"`
+
+	// Model is the model that produced the response.
+	Model string `json:"model,omitempty"`
 }
 
 // Sentinel errors for MCP operations.

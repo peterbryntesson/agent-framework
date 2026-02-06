@@ -32,6 +32,14 @@ type StdioTransport struct {
 	started  bool
 	closed   bool
 	closedCh chan struct{}
+
+	readOnce      sync.Once
+	readErrOnce   sync.Once
+	readErrCh     chan struct{}
+	readErr       error
+	notifications chan *Notification
+	pendingMu     sync.Mutex
+	pending       map[string]chan *Response
 }
 
 // StdioTransportOption configures a StdioTransport.
@@ -124,6 +132,20 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 		return newTransportError("start", fmt.Errorf("start process: %w", err))
 	}
 
+	if t.pending == nil {
+		t.pending = make(map[string]chan *Response)
+	}
+	if t.notifications == nil {
+		t.notifications = make(chan *Notification, 100)
+	}
+	if t.readErrCh == nil {
+		t.readErrCh = make(chan struct{})
+	}
+	// Start a single reader to demultiplex responses and notifications.
+	t.readOnce.Do(func() {
+		go t.readLoop()
+	})
+
 	t.started = true
 	return nil
 }
@@ -133,15 +155,16 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 // The response is read from the process's stdout.
 func (t *StdioTransport) Send(ctx context.Context, req *Request) (*Response, error) {
 	t.mu.Lock()
-	defer t.mu.Unlock()
-
 	if t.closed {
+		t.mu.Unlock()
 		return nil, newTransportError("send", ErrClosed)
 	}
 
 	if !t.started {
+		t.mu.Unlock()
 		return nil, newTransportError("send", ErrNotInitialized)
 	}
+	t.mu.Unlock()
 
 	// Assign request ID if not set
 	if req.ID == nil {
@@ -162,26 +185,40 @@ func (t *StdioTransport) Send(ctx context.Context, req *Request) (*Response, err
 
 	// Encode and send the request
 	encoder := json.NewEncoder(t.stdin)
+	responseCh := make(chan *Response, 1)
+	key := requestKey(req.ID)
+	t.pendingMu.Lock()
+	t.pending[key] = responseCh
+	t.pendingMu.Unlock()
 	if err := encoder.Encode(req); err != nil {
+		t.pendingMu.Lock()
+		delete(t.pending, key)
+		t.pendingMu.Unlock()
 		return nil, newTransportError("send", fmt.Errorf("encode request: %w", err))
 	}
 
-	// Read the response
-	line, err := t.stdout.ReadBytes('\n')
-	if err != nil {
-		if err == io.EOF {
-			return nil, newTransportError("send", io.EOF)
+	select {
+	case <-ctx.Done():
+		t.pendingMu.Lock()
+		delete(t.pending, key)
+		t.pendingMu.Unlock()
+		return nil, newTransportError("send", ctx.Err())
+	case <-t.closedCh:
+		t.pendingMu.Lock()
+		delete(t.pending, key)
+		t.pendingMu.Unlock()
+		return nil, newTransportError("send", io.EOF)
+	case <-t.readErrCh:
+		t.pendingMu.Lock()
+		delete(t.pending, key)
+		t.pendingMu.Unlock()
+		return nil, newTransportError("send", t.readErr)
+	case resp, ok := <-responseCh:
+		if !ok {
+			return nil, newTransportError("send", t.readErr)
 		}
-		return nil, newTransportError("send", fmt.Errorf("read response: %w", err))
+		return resp, nil
 	}
-
-	// Parse the response
-	var resp Response
-	if err := json.Unmarshal(line, &resp); err != nil {
-		return nil, newTransportError("send", fmt.Errorf("decode response: %w", err))
-	}
-
-	return &resp, nil
 }
 
 // Receive receives a notification from the transport.
@@ -201,47 +238,15 @@ func (t *StdioTransport) Receive(ctx context.Context) (*Notification, error) {
 	}
 	t.mu.Unlock()
 
-	// Use a goroutine to read so we can respect context cancellation
-	type readResult struct {
-		line []byte
-		err  error
-	}
-	resultCh := make(chan readResult, 1)
-
-	go func() {
-		line, err := t.stdout.ReadBytes('\n')
-		resultCh <- readResult{line: line, err: err}
-	}()
-
 	select {
 	case <-ctx.Done():
 		return nil, newTransportError("receive", ctx.Err())
 	case <-t.closedCh:
 		return nil, newTransportError("receive", io.EOF)
-	case result := <-resultCh:
-		if result.err != nil {
-			if result.err == io.EOF {
-				return nil, newTransportError("receive", io.EOF)
-			}
-			return nil, newTransportError("receive", fmt.Errorf("read notification: %w", result.err))
-		}
-
-		// Try to parse as notification first
-		var notif Notification
-		if err := json.Unmarshal(result.line, &notif); err != nil {
-			return nil, newTransportError("receive", fmt.Errorf("decode notification: %w", err))
-		}
-
-		// Verify it's a notification (no ID field in the raw JSON)
-		var raw map[string]json.RawMessage
-		if err := json.Unmarshal(result.line, &raw); err == nil {
-			if _, hasID := raw["id"]; hasID {
-				// This is a response, not a notification
-				return nil, newTransportError("receive", errors.New("received response instead of notification"))
-			}
-		}
-
-		return &notif, nil
+	case <-t.readErrCh:
+		return nil, newTransportError("receive", t.readErr)
+	case notif := <-t.notifications:
+		return notif, nil
 	}
 }
 
@@ -290,6 +295,83 @@ func (t *StdioTransport) Close() error {
 	}
 
 	return nil
+}
+
+func (t *StdioTransport) readLoop() {
+	for {
+		line, err := t.stdout.ReadBytes('\n')
+		if err != nil {
+			t.signalReadError(err)
+			return
+		}
+
+		if len(line) == 0 || (len(line) == 1 && line[0] == '\n') {
+			continue
+		}
+
+		t.dispatchLine(line)
+	}
+}
+
+func (t *StdioTransport) dispatchLine(line []byte) {
+	var envelope map[string]json.RawMessage
+	if err := json.Unmarshal(line, &envelope); err != nil {
+		return
+	}
+
+	_, hasMethod := envelope["method"]
+	_, hasID := envelope["id"]
+
+	if hasMethod {
+		if hasID {
+			// Server-initiated requests are not supported by this transport.
+			return
+		}
+		var notif Notification
+		if err := json.Unmarshal(line, &notif); err != nil {
+			return
+		}
+		if notif.JSONRPC == "" {
+			notif.JSONRPC = JSONRPCVersion
+		}
+		select {
+		case t.notifications <- &notif:
+		default:
+		}
+		return
+	}
+
+	if hasID {
+		var resp Response
+		if err := json.Unmarshal(line, &resp); err != nil {
+			return
+		}
+		key := requestKey(resp.ID)
+		t.pendingMu.Lock()
+		responseCh, ok := t.pending[key]
+		if ok {
+			delete(t.pending, key)
+		}
+		t.pendingMu.Unlock()
+		if ok {
+			responseCh <- &resp
+			close(responseCh)
+		}
+	}
+}
+
+func (t *StdioTransport) signalReadError(err error) {
+	t.readErrOnce.Do(func() {
+		t.readErr = err
+		close(t.readErrCh)
+
+		t.pendingMu.Lock()
+		for key, responseCh := range t.pending {
+			delete(t.pending, key)
+			close(responseCh)
+		}
+		t.pendingMu.Unlock()
+	})
 }
 
 // Stderr returns a reader for the process's stderr output.

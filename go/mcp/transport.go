@@ -4,6 +4,7 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"sync/atomic"
 	"time"
@@ -76,6 +77,10 @@ var requestIDGenerator atomic.Int64
 // nextRequestID returns the next unique request ID.
 func nextRequestID() int64 {
 	return requestIDGenerator.Add(1)
+}
+
+func requestKey(id interface{}) string {
+	return fmt.Sprintf("%v", id)
 }
 
 // TransportError wraps transport-level errors with additional context.

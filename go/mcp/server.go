@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/microsoft/agent-framework-go/tool"
 )
@@ -19,13 +20,18 @@ import (
 // and resource access to connected clients. The server is safe for
 // concurrent use.
 type Server struct {
-	serverInfo   Implementation
-	capabilities ServerCapabilities
-	tools        []tool.Tool
-	resources    []ResourceInfo
-	resourceFn   func(ctx context.Context, uri string) (*ResourceContent, error)
-	mu           sync.RWMutex
-	initialized  bool
+	serverInfo    Implementation
+	capabilities  ServerCapabilities
+	tools         []tool.Tool
+	resources     []ResourceInfo
+	prompts       []Prompt
+	resourceFn    func(ctx context.Context, uri string) (*ResourceContent, error)
+	loggingFn     func(level LoggingLevel)
+	samplingFn    func(ctx context.Context, params CreateMessageParams) (CreateMessageResult, error)
+	logLevel      LoggingLevel
+	notifications *notificationHub
+	mu            sync.RWMutex
+	initialized   bool
 }
 
 // ServerOption configures a Server.
@@ -40,7 +46,8 @@ func NewServer(opts ...ServerOption) *Server {
 			Name:    "agent-framework-go",
 			Version: "1.0.0",
 		},
-		capabilities: ServerCapabilities{},
+		capabilities:  ServerCapabilities{},
+		notifications: newNotificationHub(),
 	}
 
 	for _, opt := range opts {
@@ -53,6 +60,12 @@ func NewServer(opts ...ServerOption) *Server {
 	}
 	if len(s.resources) > 0 || s.resourceFn != nil {
 		s.capabilities.Resources = &ResourcesCapability{}
+	}
+	if len(s.prompts) > 0 {
+		s.capabilities.Prompts = &PromptsCapability{}
+	}
+	if s.loggingFn != nil {
+		s.capabilities.Logging = &LoggingCapability{}
 	}
 
 	return s
@@ -85,12 +98,33 @@ func WithResources(resources ...ResourceInfo) ServerOption {
 	}
 }
 
+// WithPrompts adds prompts to the server.
+func WithPrompts(prompts ...Prompt) ServerOption {
+	return func(s *Server) {
+		s.prompts = append(s.prompts, prompts...)
+	}
+}
+
 // WithResourceHandler sets a function to handle resource reads.
 // The handler is called for each resources/read request and should
 // return the resource content for the given URI.
 func WithResourceHandler(fn func(ctx context.Context, uri string) (*ResourceContent, error)) ServerOption {
 	return func(s *Server) {
 		s.resourceFn = fn
+	}
+}
+
+// WithLoggingHandler sets a handler for logging level changes.
+func WithLoggingHandler(fn func(level LoggingLevel)) ServerOption {
+	return func(s *Server) {
+		s.loggingFn = fn
+	}
+}
+
+// WithSamplingHandler sets a handler for sampling/createMessage requests.
+func WithSamplingHandler(fn func(ctx context.Context, params CreateMessageParams) (CreateMessageResult, error)) ServerOption {
+	return func(s *Server) {
+		s.samplingFn = fn
 	}
 }
 
@@ -115,6 +149,14 @@ func (s *Server) Handle(ctx context.Context, req *Request) *Response {
 		return s.handleResourcesList(ctx, req)
 	case "resources/read":
 		return s.handleResourcesRead(ctx, req)
+	case "prompts/list":
+		return s.handlePromptsList(ctx, req)
+	case "prompts/get":
+		return s.handlePromptsGet(ctx, req)
+	case "logging/setLevel":
+		return s.handleLoggingSetLevel(ctx, req)
+	case "sampling/createMessage":
+		return s.handleSamplingCreateMessage(ctx, req)
 	default:
 		return s.errorResponse(req.ID, MethodNotFound, "Method not found: "+req.Method, nil)
 	}
@@ -253,6 +295,89 @@ func (s *Server) handleResourcesRead(ctx context.Context, req *Request) *Respons
 	return s.errorResponse(req.ID, InvalidParams, "Resource not found: "+params.URI, nil)
 }
 
+// handlePromptsList returns the list of available prompts.
+func (s *Server) handlePromptsList(ctx context.Context, req *Request) *Response {
+	s.mu.RLock()
+	prompts := s.prompts
+	s.mu.RUnlock()
+
+	promptInfos := make([]PromptInfo, len(prompts))
+	for i, p := range prompts {
+		promptInfos[i] = PromptInfo{
+			Name:        p.Name,
+			Description: p.Description,
+			Arguments:   p.Arguments,
+		}
+	}
+
+	result := ListPromptsResult{
+		Prompts: promptInfos,
+	}
+
+	return s.successResponse(req.ID, result)
+}
+
+// handlePromptsGet returns a prompt by name.
+func (s *Server) handlePromptsGet(ctx context.Context, req *Request) *Response {
+	var params GetPromptParams
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		return s.errorResponse(req.ID, InvalidParams, "Invalid params", nil)
+	}
+
+	s.mu.RLock()
+	for _, p := range s.prompts {
+		if p.Name == params.Name {
+			s.mu.RUnlock()
+			return s.successResponse(req.ID, GetPromptResult{Prompt: p})
+		}
+	}
+	s.mu.RUnlock()
+
+	return s.errorResponse(req.ID, InvalidParams, "Prompt not found: "+params.Name, nil)
+}
+
+// handleLoggingSetLevel updates the logging level.
+func (s *Server) handleLoggingSetLevel(ctx context.Context, req *Request) *Response {
+	var params LoggingSetLevelParams
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		return s.errorResponse(req.ID, InvalidParams, "Invalid params", nil)
+	}
+
+	s.mu.Lock()
+	s.logLevel = params.Level
+	loggingFn := s.loggingFn
+	s.mu.Unlock()
+
+	if loggingFn != nil {
+		loggingFn(params.Level)
+	}
+
+	return s.successResponse(req.ID, map[string]string{"status": "ok"})
+}
+
+// handleSamplingCreateMessage returns a sampled response when configured.
+func (s *Server) handleSamplingCreateMessage(ctx context.Context, req *Request) *Response {
+	var params CreateMessageParams
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		return s.errorResponse(req.ID, InvalidParams, "Invalid params", nil)
+	}
+
+	s.mu.RLock()
+	samplingFn := s.samplingFn
+	s.mu.RUnlock()
+
+	if samplingFn == nil {
+		return s.errorResponse(req.ID, MethodNotFound, "Sampling handler not configured", nil)
+	}
+
+	result, err := samplingFn(ctx, params)
+	if err != nil {
+		return s.errorResponse(req.ID, InternalError, err.Error(), nil)
+	}
+
+	return s.successResponse(req.ID, result)
+}
+
 // successResponse creates a successful JSON-RPC response.
 func (s *Server) successResponse(id interface{}, result interface{}) *Response {
 	resultJSON, err := json.Marshal(result)
@@ -332,6 +457,10 @@ func (s *Server) ServeStdio(ctx context.Context) error {
 // returns JSON-RPC responses. This enables HTTP-based MCP communication.
 func (s *Server) HTTPHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			s.SSEHandler().ServeHTTP(w, r)
+			return
+		}
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -368,6 +497,49 @@ func (s *Server) HTTPHandler() http.Handler {
 	})
 }
 
+// SSEHandler returns an http.Handler that streams notifications via SSE.
+func (s *Server) SSEHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+			return
+		}
+
+		client := s.notifications.Subscribe()
+		defer s.notifications.Unsubscribe(client)
+
+		ctx := r.Context()
+		keepAlive := time.NewTicker(30 * time.Second)
+		defer keepAlive.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-keepAlive.C:
+				_, _ = w.Write([]byte(": ping\n\n"))
+				flusher.Flush()
+			case payload := <-client:
+				_, _ = w.Write([]byte("event: notification\n"))
+				_, _ = w.Write([]byte("data: "))
+				_, _ = w.Write(payload)
+				_, _ = w.Write([]byte("\n\n"))
+				flusher.Flush()
+			}
+		}
+	})
+}
+
 // writeErrorResponse writes a JSON-RPC error response to the HTTP response writer.
 func (s *Server) writeErrorResponse(w http.ResponseWriter, id interface{}, code int, message string) {
 	resp := s.errorResponse(id, code, message, nil)
@@ -384,6 +556,7 @@ func (s *Server) AddTool(t tool.Tool) {
 	if s.capabilities.Tools == nil {
 		s.capabilities.Tools = &ToolsCapability{}
 	}
+	s.notifications.Broadcast(Notification{JSONRPC: JSONRPCVersion, Method: "notifications/tools/list_changed"})
 }
 
 // AddResource adds a resource to the server at runtime.
@@ -395,4 +568,29 @@ func (s *Server) AddResource(r ResourceInfo) {
 	if s.capabilities.Resources == nil {
 		s.capabilities.Resources = &ResourcesCapability{}
 	}
+	s.notifications.Broadcast(Notification{JSONRPC: JSONRPCVersion, Method: "notifications/resources/list_changed"})
+}
+
+// AddPrompt adds a prompt to the server at runtime.
+func (s *Server) AddPrompt(p Prompt) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.prompts = append(s.prompts, p)
+	if s.capabilities.Prompts == nil {
+		s.capabilities.Prompts = &PromptsCapability{}
+	}
+	s.notifications.Broadcast(Notification{JSONRPC: JSONRPCVersion, Method: "notifications/prompts/list_changed"})
+}
+
+// LogMessage broadcasts a logging notification to connected clients.
+func (s *Server) LogMessage(level LoggingLevel, data json.RawMessage) {
+	params, err := json.Marshal(LoggingMessageNotificationParams{Level: level, Data: data})
+	if err != nil {
+		return
+	}
+	s.notifications.Broadcast(Notification{
+		JSONRPC: JSONRPCVersion,
+		Method:  "logging/message",
+		Params:  params,
+	})
 }
