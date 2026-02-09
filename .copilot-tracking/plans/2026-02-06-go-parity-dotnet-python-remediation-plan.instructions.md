@@ -53,11 +53,11 @@ Use this plan to address parity gaps identified in the review for Go Epic 5 pari
 
 ### Phase 3: Declarative agent parity
 
-* [ ] Expand validation to include model fields and schema requirements
-* [ ] Add tool parsing support for MCP, web search, file search, and code interpreter
-* [ ] Apply tool bindings when creating agents
-* [ ] Expand PowerFx evaluation beyond Env.VAR with safe environment access
-* [ ] Expand provider mapping to match Python providers and API types
+* [x] Expand validation to include model fields and schema requirements
+* [x] Add tool parsing support for MCP, web search, file search, and code interpreter
+* [x] Apply tool bindings when creating agents
+* [x] Expand PowerFx evaluation beyond Env.VAR with safe environment access
+* [x] Expand provider mapping to match Python providers and API types
 
 ### Phase 4: Hosting and protocol parity
 

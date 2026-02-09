@@ -33,6 +33,131 @@ func parseFunction(t Tool) (tool.Tool, error) {
 	}, nil
 }
 
+// parseMCP creates a hosted MCP tool from a declarative tool definition.
+func parseMCP(t Tool) (tool.Tool, error) {
+	serverURL := t.Server
+	if t.URL != "" {
+		serverURL = t.URL
+	}
+	if t.Name == "" {
+		return nil, fmt.Errorf("tool name is required")
+	}
+	if serverURL == "" {
+		return nil, fmt.Errorf("mcp tool server url is required")
+	}
+
+	hosted := tool.NewHostedMCPTool(t.Name, serverURL)
+	hosted.ToolDescription = t.Description
+	if t.ServerName != "" {
+		hosted.ServerLabel = t.ServerName
+	} else if t.ServerDescription != "" {
+		hosted.ServerLabel = t.ServerDescription
+	}
+	hosted.AllowedTools = t.AllowedTools
+
+	if t.ApprovalMode != nil {
+		always := t.ApprovalMode.AlwaysRequireApproval
+		if len(always) == 0 {
+			always = t.ApprovalMode.AlwaysRequireApprovalTools
+		}
+		never := t.ApprovalMode.NeverRequireApproval
+		if len(never) == 0 {
+			never = t.ApprovalMode.NeverRequireApprovalTools
+		}
+		if len(always) > 0 || len(never) > 0 {
+			hosted.SpecificApproval = &tool.MCPSpecificApproval{
+				AlwaysRequireApproval: always,
+				NeverRequireApproval:  never,
+			}
+		} else if t.ApprovalMode.Kind != "" {
+			switch normalizeAPIType(t.ApprovalMode.Kind) {
+			case "never":
+				hosted.RequireApproval = tool.MCPApprovalNever
+			case "always":
+				hosted.RequireApproval = tool.MCPApprovalAlways
+			case "specify":
+				// No specific tools provided; keep default approval behavior.
+			default:
+				return nil, fmt.Errorf("unsupported mcp approval mode %q", t.ApprovalMode.Kind)
+			}
+		}
+	}
+
+	return hosted, nil
+}
+
+// parseWebSearch creates a hosted web search tool.
+func parseWebSearch(t Tool) (tool.Tool, error) {
+	hosted := tool.NewHostedWebSearchTool()
+	if t.Name != "" {
+		hosted.ToolName = t.Name
+	}
+	hosted.ToolDescription = t.Description
+	hosted.SearchContextSize = t.SearchContextSize
+	if t.UserLocation != nil {
+		hosted.UserLocation = &tool.UserLocation{
+			Type:        t.UserLocation.Type,
+			City:        t.UserLocation.City,
+			Region:      t.UserLocation.Region,
+			Country:     t.UserLocation.Country,
+			CountryCode: t.UserLocation.CountryCode,
+			Timezone:    t.UserLocation.Timezone,
+		}
+	}
+	return hosted, nil
+}
+
+// parseFileSearch creates a hosted file search tool.
+func parseFileSearch(t Tool) (tool.Tool, error) {
+	hosted := tool.NewHostedFileSearchTool()
+	if t.Name != "" {
+		hosted.ToolName = t.Name
+	}
+	hosted.ToolDescription = t.Description
+	hosted.VectorStoreIDs = t.VectorStoreIDs
+	if t.MaximumResultCount > 0 {
+		hosted.MaxResults = t.MaximumResultCount
+	} else {
+		hosted.MaxResults = t.MaxResults
+	}
+	if t.Ranking != nil || t.Ranker != "" || t.ScoreThreshold != nil {
+		hosted.Ranking = &tool.FileSearchRanking{
+			Ranker:         t.Ranker,
+			ScoreThreshold: 0,
+		}
+		if t.Ranking != nil {
+			hosted.Ranking.Ranker = t.Ranking.Ranker
+			hosted.Ranking.ScoreThreshold = t.Ranking.ScoreThreshold
+		}
+		if t.ScoreThreshold != nil {
+			hosted.Ranking.ScoreThreshold = *t.ScoreThreshold
+		}
+	}
+	if len(t.Filters) > 0 {
+		hosted.AdditionalProperties = map[string]interface{}{
+			"filters": t.Filters,
+		}
+	}
+	return hosted, nil
+}
+
+// parseCodeInterpreter creates a hosted code interpreter tool.
+func parseCodeInterpreter(t Tool) (tool.Tool, error) {
+	hosted := tool.NewHostedCodeInterpreterTool()
+	if t.Name != "" {
+		hosted.ToolName = t.Name
+	}
+	hosted.ToolDescription = t.Description
+	if t.Container != nil {
+		hosted.Container = &tool.CodeInterpreterContainer{
+			Image:   t.Container.Image,
+			EnvVars: t.Container.EnvVars,
+		}
+	}
+	hosted.FileIDs = t.FileIDs
+	return hosted, nil
+}
+
 // declarativeTool implements tool.Tool for declaratively defined tools.
 type declarativeTool struct {
 	name        string

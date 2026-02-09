@@ -4,9 +4,11 @@ package declarative
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/microsoft/agent-framework-go/agent"
 	"github.com/microsoft/agent-framework-go/chat"
@@ -47,6 +49,10 @@ func NewAgentFactory() *AgentFactory {
 
 	// Register default tool parsers
 	factory.toolParsers["function"] = parseFunction
+	factory.toolParsers["mcp"] = parseMCP
+	factory.toolParsers["websearch"] = parseWebSearch
+	factory.toolParsers["filesearch"] = parseFileSearch
+	factory.toolParsers["codeinterpreter"] = parseCodeInterpreter
 	factory.toolParsers[""] = parseFunction // default to function
 
 	return factory
@@ -95,7 +101,13 @@ func (f *AgentFactory) Create(ctx context.Context, def *PromptAgent) (agent.Agen
 			return nil, fmt.Errorf("parsing tool %q: %w", toolDef.Name, err)
 		}
 		if t != nil {
-			tools = append(tools, t)
+			boundTool, err := f.applyToolBinding(toolDef, t)
+			if err != nil {
+				return nil, fmt.Errorf("binding tool %q: %w", toolDef.Name, err)
+			}
+			if boundTool != nil {
+				tools = append(tools, boundTool)
+			}
 		}
 	}
 
@@ -174,10 +186,10 @@ func (f *AgentFactory) createProvider(model Model) (chat.Client, error) {
 func getProviderKind(model Model) string {
 	// Check Provider field first
 	if model.Provider != "" {
-		switch model.Provider {
-		case "OpenAI":
+		switch strings.ToLower(strings.TrimSpace(model.Provider)) {
+		case "openai":
 			return "openai"
-		case "AzureOpenAI":
+		case "azureopenai", "azure_openai", "azure-openai":
 			return "azure_openai"
 		default:
 			return model.Provider
@@ -198,7 +210,7 @@ func getProviderKind(model Model) string {
 
 // parseTool parses a tool definition into a tool.Tool.
 func (f *AgentFactory) parseTool(t Tool) (tool.Tool, error) {
-	kind := t.Kind
+	kind := normalizeToolKind(t.Kind)
 	if kind == "" {
 		kind = "function"
 	}
@@ -209,4 +221,37 @@ func (f *AgentFactory) parseTool(t Tool) (tool.Tool, error) {
 	}
 
 	return parser(t)
+}
+
+func (f *AgentFactory) applyToolBinding(def Tool, parsed tool.Tool) (tool.Tool, error) {
+	bindingName := strings.TrimSpace(def.Binding)
+	if bindingName == "" {
+		bindingName = strings.TrimSpace(def.Name)
+	}
+	if bindingName == "" {
+		return parsed, nil
+	}
+
+	binding, ok := f.bindings[bindingName]
+	if !ok {
+		return parsed, nil
+	}
+
+	switch value := binding.(type) {
+	case tool.Tool:
+		return value, nil
+	case func(context.Context, json.RawMessage) (tool.Result, error):
+		declarative, ok := parsed.(*declarativeTool)
+		if !ok {
+			return nil, fmt.Errorf("binding %q requires a declarative tool, got %T", bindingName, parsed)
+		}
+		declarative.SetHandler(value)
+		return declarative, nil
+	default:
+		wrapped, err := tool.NewFunctionTool(def.Name, def.Description, value)
+		if err != nil {
+			return nil, fmt.Errorf("binding %q unsupported type %T: %w", bindingName, value, err)
+		}
+		return wrapped, nil
+	}
 }

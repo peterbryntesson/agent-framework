@@ -43,10 +43,10 @@ type Model struct {
 	// Supports =Env.VAR_NAME syntax for environment variable substitution.
 	ID string `yaml:"id,omitempty" json:"id,omitempty"`
 
-	// Provider specifies the AI provider: "OpenAI", "AzureOpenAI", "Anthropic".
+	// Provider specifies the AI provider: "OpenAI" or "AzureOpenAI".
 	Provider string `yaml:"provider,omitempty" json:"provider,omitempty"`
 
-	// APIType specifies the API type: "Chat", "Responses", "Assistants".
+	// APIType specifies the API type: "Chat" or "Responses".
 	APIType string `yaml:"apiType,omitempty" json:"apiType,omitempty"`
 
 	// Endpoint is the API endpoint URL (optional, for custom endpoints).
@@ -108,6 +108,54 @@ type Tool struct {
 	// Server is the MCP server endpoint (for MCP tools).
 	Server string `yaml:"server,omitempty" json:"server,omitempty"`
 
+	// URL is an alias for Server (for MCP tools).
+	URL string `yaml:"url,omitempty" json:"url,omitempty"`
+
+	// ServerName is the MCP server display name.
+	ServerName string `yaml:"serverName,omitempty" json:"serverName,omitempty"`
+
+	// ServerDescription provides details about the MCP server.
+	ServerDescription string `yaml:"serverDescription,omitempty" json:"serverDescription,omitempty"`
+
+	// AllowedTools restricts which MCP tools can be used.
+	AllowedTools []string `yaml:"allowedTools,omitempty" json:"allowedTools,omitempty"`
+
+	// ApprovalMode configures MCP approval behavior.
+	ApprovalMode *MCPApprovalMode `yaml:"approvalMode,omitempty" json:"approvalMode,omitempty"`
+
+	// SearchContextSize controls web search context size.
+	SearchContextSize string `yaml:"searchContextSize,omitempty" json:"searchContextSize,omitempty"`
+
+	// UserLocation provides geographic context for web search.
+	UserLocation *UserLocation `yaml:"userLocation,omitempty" json:"userLocation,omitempty"`
+
+	// VectorStoreIDs are IDs of vector stores to search (file search).
+	VectorStoreIDs []string `yaml:"vectorStoreIds,omitempty" json:"vectorStoreIds,omitempty"`
+
+	// MaximumResultCount limits file search results (alias for MaxResults).
+	MaximumResultCount int `yaml:"maximumResultCount,omitempty" json:"maximumResultCount,omitempty"`
+
+	// Ranker specifies the ranking algorithm (alias for Ranking.Ranker).
+	Ranker string `yaml:"ranker,omitempty" json:"ranker,omitempty"`
+
+	// ScoreThreshold specifies the minimum relevance score (alias for Ranking.ScoreThreshold).
+	ScoreThreshold *float64 `yaml:"scoreThreshold,omitempty" json:"scoreThreshold,omitempty"`
+
+	// Filters apply additional constraints to file search results.
+	Filters map[string]interface{} `yaml:"filters,omitempty" json:"filters,omitempty"`
+
+	// MaxResults limits file search results.
+	MaxResults int `yaml:"maxResults,omitempty" json:"maxResults,omitempty"`
+
+	// Ranking controls file search ranking.
+	Ranking *FileSearchRanking `yaml:"ranking,omitempty" json:"ranking,omitempty"`
+
+	// Container configures code interpreter container settings.
+	Container *CodeInterpreterContainer `yaml:"container,omitempty" json:"container,omitempty"`
+
+	// FileIDs are IDs of files available to code interpreter.
+	FileIDs []string `yaml:"fileIds,omitempty" json:"fileIds,omitempty"`
+
 	// Binding is a single binding name for the tool implementation.
 	Binding string `yaml:"binding,omitempty" json:"binding,omitempty"`
 
@@ -116,6 +164,46 @@ type Tool struct {
 
 	// Parameters defines the tool's input parameters (for function tools).
 	Parameters *ParameterSchema `yaml:"parameters,omitempty" json:"parameters,omitempty"`
+}
+
+// MCPApprovalMode configures approval behavior for MCP tools.
+type MCPApprovalMode struct {
+	// Kind specifies approval mode: "never" or "always".
+	Kind string `yaml:"kind,omitempty" json:"kind,omitempty"`
+
+	// AlwaysRequireApproval lists tools that always require approval.
+	AlwaysRequireApproval []string `yaml:"alwaysRequireApproval,omitempty" json:"alwaysRequireApproval,omitempty"`
+
+	// AlwaysRequireApprovalTools lists tools that always require approval.
+	AlwaysRequireApprovalTools []string `yaml:"alwaysRequireApprovalTools,omitempty" json:"alwaysRequireApprovalTools,omitempty"`
+
+	// NeverRequireApproval lists tools that never require approval.
+	NeverRequireApproval []string `yaml:"neverRequireApproval,omitempty" json:"neverRequireApproval,omitempty"`
+
+	// NeverRequireApprovalTools lists tools that never require approval.
+	NeverRequireApprovalTools []string `yaml:"neverRequireApprovalTools,omitempty" json:"neverRequireApprovalTools,omitempty"`
+}
+
+// UserLocation represents approximate user location for web search.
+type UserLocation struct {
+	Type        string `yaml:"type,omitempty" json:"type,omitempty"`
+	City        string `yaml:"city,omitempty" json:"city,omitempty"`
+	Region      string `yaml:"region,omitempty" json:"region,omitempty"`
+	Country     string `yaml:"country,omitempty" json:"country,omitempty"`
+	CountryCode string `yaml:"countryCode,omitempty" json:"countryCode,omitempty"`
+	Timezone    string `yaml:"timezone,omitempty" json:"timezone,omitempty"`
+}
+
+// FileSearchRanking specifies ranking configuration for file search results.
+type FileSearchRanking struct {
+	Ranker         string  `yaml:"ranker,omitempty" json:"ranker,omitempty"`
+	ScoreThreshold float64 `yaml:"scoreThreshold,omitempty" json:"scoreThreshold,omitempty"`
+}
+
+// CodeInterpreterContainer represents container settings for code interpreter.
+type CodeInterpreterContainer struct {
+	Image   string            `yaml:"image,omitempty" json:"image,omitempty"`
+	EnvVars map[string]string `yaml:"envVars,omitempty" json:"envVars,omitempty"`
 }
 
 // ParameterSchema defines a JSON Schema for tool parameters.

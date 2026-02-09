@@ -4,6 +4,7 @@ package declarative
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/microsoft/agent-framework-go/chat"
 	"github.com/microsoft/agent-framework-go/providers/openai"
@@ -12,6 +13,27 @@ import (
 // buildOpenAIProvider creates an OpenAI provider from a model configuration.
 func buildOpenAIProvider(model Model) (chat.Client, error) {
 	apiKey := resolveAPIKey(model)
+	apiType := normalizeAPIType(model.APIType)
+	if apiType == "" {
+		apiType = "chat"
+	}
+
+	if apiType == "responses" {
+		opts := make([]openai.ResponsesOption, 0)
+		if apiKey != "" {
+			opts = append(opts, openai.ResponsesWithAPIKey(apiKey))
+		}
+		if model.ID != "" {
+			opts = append(opts, openai.ResponsesWithModel(model.ID))
+		}
+		if model.Endpoint != "" {
+			opts = append(opts, openai.ResponsesWithBaseURL(model.Endpoint))
+		}
+		return openai.NewResponsesClient(opts...)
+	}
+	if apiType != "chat" {
+		return nil, fmt.Errorf("unsupported apiType %q for OpenAI provider", model.APIType)
+	}
 
 	opts := make([]openai.Option, 0)
 
@@ -49,6 +71,22 @@ func buildAzureOpenAIProvider(model Model) (chat.Client, error) {
 	modelID := model.ID
 	if modelID == "" {
 		return nil, errors.New("model ID (deployment name) is required for Azure OpenAI provider")
+	}
+
+	apiType := normalizeAPIType(model.APIType)
+	if apiType == "" {
+		apiType = "chat"
+	}
+	if apiType == "responses" {
+		opts := []openai.ResponsesOption{
+			openai.ResponsesWithAPIKey(apiKey),
+			openai.ResponsesWithModel(modelID),
+			openai.ResponsesWithBaseURL(endpoint),
+		}
+		return openai.NewResponsesClient(opts...)
+	}
+	if apiType != "chat" {
+		return nil, fmt.Errorf("unsupported apiType %q for Azure OpenAI provider", model.APIType)
 	}
 
 	// For Azure OpenAI, we use the OpenAI client with Azure-specific settings
