@@ -43,3 +43,24 @@ func WithBasePath(path string) Option {
 		h.basePath = path
 	}
 }
+
+// WithResponsesService sets the responses service for Responses endpoints.
+func WithResponsesService(service ResponsesService) Option {
+	return func(h *Handler) {
+		h.responsesService = service
+	}
+}
+
+// WithConversationStore sets the conversation store for Conversations endpoints.
+func WithConversationStore(store ConversationStore) Option {
+	return func(h *Handler) {
+		h.conversationStore = store
+	}
+}
+
+// WithConversationIndex sets the conversation index for agent listing.
+func WithConversationIndex(index AgentConversationIndex) Option {
+	return func(h *Handler) {
+		h.conversationIndex = index
+	}
+}

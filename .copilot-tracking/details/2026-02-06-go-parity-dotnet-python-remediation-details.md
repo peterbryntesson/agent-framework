@@ -20,3 +20,7 @@ estimated_reading_time: 5
 ## Notes
 
 * No additional constraints beyond the plan at this time.
+
+## Follow-ups
+
+* Confirm whether the Go OpenAI Responses and Conversations models should be expanded to full schema parity with .NET for additional item/content types

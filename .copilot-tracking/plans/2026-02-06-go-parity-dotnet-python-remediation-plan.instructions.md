@@ -61,11 +61,11 @@ Use this plan to address parity gaps identified in the review for Go Epic 5 pari
 
 ### Phase 4: Hosting and protocol parity
 
-* [ ] Expand AG-UI RunRequest model to include state, tools, context, forwarded props, and run IDs
-* [ ] Add OpenAI Responses and Conversations hosting endpoints
-* [ ] Align OpenAI session persistence to save and load by conversation ID
-* [ ] Implement AG-UI client WithHTTPClient behavior
-* [ ] Replace HostedAgentBuilder panic with error return or explicit validation API
+* [x] Expand AG-UI RunRequest model to include state, tools, context, forwarded props, and run IDs
+* [x] Add OpenAI Responses and Conversations hosting endpoints
+* [x] Align OpenAI session persistence to save and load by conversation ID
+* [x] Implement AG-UI client WithHTTPClient behavior
+* [x] Replace HostedAgentBuilder panic with error return or explicit validation API
 
 ### Phase 5: DevUI and Purview parity
 

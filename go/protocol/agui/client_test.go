@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/microsoft/agent-framework-go/agent"
 	"github.com/stretchr/testify/assert"
@@ -32,6 +33,17 @@ func TestNewClient(t *testing.T) {
 
 		// Assert
 		assert.Equal(t, "Bearer token", client.options.headers["Authorization"])
+	})
+
+	t.Run("uses custom http client", func(t *testing.T) {
+		// Arrange
+		customClient := &http.Client{Timeout: 2 * time.Second}
+
+		// Act
+		client := NewClient("http://localhost:8080", WithHTTPClient(customClient))
+
+		// Assert
+		assert.Same(t, customClient, client.httpClient)
 	})
 }
 
@@ -327,5 +339,34 @@ func TestClient_BuildRequestBody(t *testing.T) {
 		state, ok := body["state"].(map[string]interface{})
 		require.True(t, ok)
 		assert.Equal(t, "value", state["key"])
+	})
+
+	t.Run("includes run metadata", func(t *testing.T) {
+		// Arrange
+		client := NewClient("http://localhost")
+		req := &ClientRunRequest{
+			ThreadID: "thread-123",
+			RunID:    "run-456",
+			Tools: []interface{}{
+				map[string]interface{}{"type": "function"},
+			},
+			Context: []interface{}{
+				map[string]interface{}{"key": "value"},
+			},
+			ForwardedProps: map[string]interface{}{
+				"foo": "bar",
+			},
+		}
+
+		// Act
+		body := client.buildRequestBody(req)
+
+		// Assert
+		assert.Equal(t, "run-456", body["runId"])
+		assert.Len(t, body["tools"], 1)
+		assert.Len(t, body["context"], 1)
+		forwarded, ok := body["forwardedProps"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "bar", forwarded["foo"])
 	})
 }

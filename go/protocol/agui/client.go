@@ -27,8 +27,9 @@ type Client struct {
 }
 
 type clientOptions struct {
-	timeout time.Duration
-	headers map[string]string
+	timeout    time.Duration
+	headers    map[string]string
+	httpClient *http.Client
 }
 
 // ClientOption configures the AG-UI client.
@@ -54,7 +55,7 @@ func WithHeader(key, value string) ClientOption {
 // WithHTTPClient sets a custom HTTP client.
 func WithHTTPClient(client *http.Client) ClientOption {
 	return func(o *clientOptions) {
-		// Custom client replaces default timeout handling
+		o.httpClient = client
 	}
 }
 
@@ -68,12 +69,15 @@ func NewClient(endpoint string, opts ...ClientOption) *Client {
 		opt(&options)
 	}
 
+	httpClient := options.httpClient
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: options.timeout}
+	}
+
 	return &Client{
-		endpoint: endpoint,
-		httpClient: &http.Client{
-			Timeout: options.timeout,
-		},
-		options: options,
+		endpoint:   endpoint,
+		httpClient: httpClient,
+		options:    options,
 	}
 }
 
@@ -82,11 +86,23 @@ type ClientRunRequest struct {
 	// ThreadID identifies the conversation thread
 	ThreadID string
 
+	// RunID identifies the specific run within the thread
+	RunID string
+
 	// Messages are the input messages to send
 	Messages []agent.Message
 
 	// State is additional state to send with the request
 	State map[string]interface{}
+
+	// Tools is an optional list of tools to send with the request
+	Tools []interface{}
+
+	// Context is an optional list of context items to send with the request
+	Context []interface{}
+
+	// ForwardedProps are optional forwarded properties for the request
+	ForwardedProps map[string]interface{}
 }
 
 // Run executes a request and returns the complete response.
@@ -348,6 +364,10 @@ func (c *Client) buildRequestBody(req *ClientRunRequest) map[string]interface{} 
 		"threadId": req.ThreadID,
 	}
 
+	if req.RunID != "" {
+		body["runId"] = req.RunID
+	}
+
 	if len(req.Messages) > 0 {
 		// Convert messages to request format
 		msgs := make([]map[string]interface{}, len(req.Messages))
@@ -362,6 +382,18 @@ func (c *Client) buildRequestBody(req *ClientRunRequest) map[string]interface{} 
 
 	if len(req.State) > 0 {
 		body["state"] = req.State
+	}
+
+	if len(req.Tools) > 0 {
+		body["tools"] = req.Tools
+	}
+
+	if len(req.Context) > 0 {
+		body["context"] = req.Context
+	}
+
+	if len(req.ForwardedProps) > 0 {
+		body["forwardedProps"] = req.ForwardedProps
 	}
 
 	return body

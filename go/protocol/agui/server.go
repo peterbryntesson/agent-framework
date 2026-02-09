@@ -61,8 +61,23 @@ type RunRequest struct {
 	// ThreadID identifies the conversation thread.
 	ThreadID string `json:"threadId,omitempty"`
 
+	// RunID identifies the specific run within the thread.
+	RunID string `json:"runId,omitempty"`
+
+	// State contains optional state data for the run.
+	State json.RawMessage `json:"state,omitempty"`
+
 	// Messages contains the conversation history and new user input.
 	Messages []RequestMessage `json:"messages"`
+
+	// Tools contains optional tool definitions for the run.
+	Tools []json.RawMessage `json:"tools,omitempty"`
+
+	// Context contains optional context items for the run.
+	Context []json.RawMessage `json:"context,omitempty"`
+
+	// ForwardedProps contains optional forwarded properties.
+	ForwardedProps json.RawMessage `json:"forwardedProps,omitempty"`
 }
 
 // RequestMessage represents a message in a run request.
@@ -82,24 +97,26 @@ func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.ThreadID == "" {
+		req.ThreadID = uuid.New().String()
+	}
+	if req.RunID == "" {
+		req.RunID = uuid.New().String()
+	}
+
 	// Convert request messages to agent messages
 	agentMessages := s.toAgentMessages(req.Messages)
+	options := s.buildRunOptions(req)
 
 	// Run the agent
-	response, err := s.agent.Run(r.Context(), agentMessages)
+	response, err := s.agent.Run(r.Context(), agentMessages, options...)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Convert response to AG-UI events
-	threadID := req.ThreadID
-	if threadID == "" {
-		threadID = uuid.New().String()
-	}
-	runID := uuid.New().String()
-
-	converter := NewEventConverter(threadID, runID)
+	converter := NewEventConverter(req.ThreadID, req.RunID)
 	var events []Event
 
 	// Add run started event
@@ -133,6 +150,13 @@ func (s *Server) handleRunStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.ThreadID == "" {
+		req.ThreadID = uuid.New().String()
+	}
+	if req.RunID == "" {
+		req.RunID = uuid.New().String()
+	}
+
 	// Set up SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -154,24 +178,18 @@ func (s *Server) handleRunStream(w http.ResponseWriter, r *http.Request) {
 	s.registerConnection(connectionID, cancel)
 	defer s.unregisterConnection(connectionID)
 
-	// Prepare thread and run IDs
-	threadID := req.ThreadID
-	if threadID == "" {
-		threadID = uuid.New().String()
-	}
-	runID := uuid.New().String()
-
 	// Create event converter
-	converter := NewEventConverter(threadID, runID)
+	converter := NewEventConverter(req.ThreadID, req.RunID)
 
 	// Send run started event
 	s.writeSSEEvent(w, flusher, converter.RunStarted())
 
 	// Convert request messages to agent messages
 	agentMessages := s.toAgentMessages(req.Messages)
+	options := s.buildRunOptions(req)
 
 	// Run the agent in streaming mode
-	updates, err := s.agent.RunStream(ctx, agentMessages)
+	updates, err := s.agent.RunStream(ctx, agentMessages, options...)
 	if err != nil {
 		s.writeSSEEvent(w, flusher, NewRunErrorEvent(err.Error()))
 		return
@@ -262,6 +280,71 @@ func (s *Server) toAgentMessage(msg RequestMessage) agent.Message {
 	default:
 		return agent.NewUserMessage(msg.Content)
 	}
+}
+
+func (s *Server) buildRunOptions(req RunRequest) []agent.RunOption {
+	metadata := map[string]interface{}{}
+
+	if req.ThreadID != "" {
+		metadata["ag_ui_thread_id"] = req.ThreadID
+	}
+	if req.RunID != "" {
+		metadata["ag_ui_run_id"] = req.RunID
+	}
+	if len(req.State) > 0 {
+		metadata["ag_ui_state"] = decodeRawJSON(req.State)
+	}
+	if len(req.Context) > 0 {
+		metadata["ag_ui_context"] = decodeRawJSONArray(req.Context)
+	}
+	if len(req.ForwardedProps) > 0 {
+		metadata["ag_ui_forwarded_properties"] = decodeRawJSON(req.ForwardedProps)
+	}
+
+	var opts []agent.RunOption
+	if len(metadata) > 0 {
+		opts = append(opts, agent.WithMetadata(metadata))
+	}
+
+	if len(req.Tools) > 0 {
+		tools := make([]interface{}, 0, len(req.Tools))
+		for _, raw := range req.Tools {
+			if value := decodeRawJSON(raw); value != nil {
+				tools = append(tools, value)
+			}
+		}
+		if len(tools) > 0 {
+			opts = append(opts, agent.WithTools(tools...))
+		}
+	}
+
+	return opts
+}
+
+func decodeRawJSON(raw json.RawMessage) interface{} {
+	if len(raw) == 0 {
+		return nil
+	}
+
+	var value interface{}
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return string(raw)
+	}
+	return value
+}
+
+func decodeRawJSONArray(values []json.RawMessage) []interface{} {
+	if len(values) == 0 {
+		return nil
+	}
+
+	decoded := make([]interface{}, 0, len(values))
+	for _, raw := range values {
+		if value := decodeRawJSON(raw); value != nil {
+			decoded = append(decoded, value)
+		}
+	}
+	return decoded
 }
 
 // writeSSEEvent writes an AG-UI event as an SSE message.

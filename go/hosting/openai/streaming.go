@@ -18,6 +18,7 @@ import (
 func (h *Handler) streamCompletions(
 	w http.ResponseWriter,
 	ctx context.Context,
+	conversationID string,
 	session agent.Session,
 	messages []chat.Message,
 	req ChatCompletionRequest,
@@ -71,7 +72,7 @@ func (h *Handler) streamCompletions(
 	}
 
 	// Save session if store is configured
-	if err := h.saveSession(ctx, session); err != nil {
+	if err := h.saveSession(ctx, conversationID, session); err != nil {
 		writeSSEError(w, flusher, "session_error", "Failed to save session: "+err.Error())
 		return
 	}

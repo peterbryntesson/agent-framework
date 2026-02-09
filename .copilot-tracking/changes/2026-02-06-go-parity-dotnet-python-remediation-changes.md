@@ -6,7 +6,7 @@
 
 ## Summary
 
-Added MCP WebSocket transport, prompt/logging/sampling handlers, and declarative parity updates for hosted tools, bindings, validation, and provider mapping.
+Added MCP WebSocket transport, prompt/logging/sampling handlers, declarative parity updates, AG-UI run metadata handling, and OpenAI responses/conversations hosting endpoints with session persistence alignment.
 
 ## Changes
 
@@ -16,6 +16,15 @@ Added MCP WebSocket transport, prompt/logging/sampling handlers, and declarative
 * go/mcp/server_notifications.go - Notification hub for SSE streaming.
 * go/declarative/normalize.go - Normalization helpers for API and tool kinds.
 * go/declarative/approval_mode.go - Decode MCP approval modes from scalar or object YAML.
+* go/hosting/openai/responses_models.go - Minimal Responses API request/response models.
+* go/hosting/openai/responses_service.go - In-memory Responses API service with streaming events.
+* go/hosting/openai/responses_handler.go - Responses endpoints for create, get, cancel, delete, and input item listing.
+* go/hosting/openai/conversations_models.go - Conversations API request/response models.
+* go/hosting/openai/conversations_store.go - In-memory conversations store and agent index.
+* go/hosting/openai/conversations_handler.go - Conversations endpoints for CRUD and item management.
+* go/hosting/openai/util.go - Shared helpers for IDs and timestamps.
+* go/hosting/openai/responses_test.go - Responses endpoint coverage.
+* go/hosting/openai/conversations_test.go - Conversations endpoint coverage.
 
 ### Modified
 
@@ -34,6 +43,17 @@ Added MCP WebSocket transport, prompt/logging/sampling handlers, and declarative
 * go/declarative/eval.go - Support Env() and Env[] PowerFx-style environment evaluation.
 * go/declarative/providers.go - Route OpenAI/AzureOpenAI apiType to chat or responses clients.
 * go/declarative/validation.go - Validate model configuration, schema requirements, and MCP tool fields.
+* go/protocol/agui/server.go - Expand run request fields and propagate metadata/tools into run options.
+* go/protocol/agui/client.go - Add run metadata fields and honor custom HTTP client configuration.
+* go/protocol/agui/client_test.go - Validate run metadata request shaping and client options.
+* go/hosting/builder.go - Return errors for missing agent configuration.
+* go/hosting/builder_test.go - Update builder tests for error-returning Build.
+* go/hosting/doc.go - Refresh hosted agent builder usage example.
+* go/hosting/openai/handler.go - Add responses/conversations routes and default services.
+* go/hosting/openai/completions.go - Persist sessions by conversation ID and return header.
+* go/hosting/openai/streaming.go - Persist sessions by conversation ID after streaming.
+* go/hosting/openai/options.go - Add responses/conversations service options.
+* go/hosting/openai/doc.go - Document responses and conversations endpoints.
 
 ### Removed
 
@@ -41,7 +61,8 @@ Added MCP WebSocket transport, prompt/logging/sampling handlers, and declarative
 
 ## Additional or Deviating Changes
 
-* None
+* Added minimal Responses/Conversations handler tests outside explicit plan scope
+	* Ensures new endpoints have baseline coverage and reduces regression risk
 
 ## Release Summary
 

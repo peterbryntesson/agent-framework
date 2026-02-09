@@ -73,10 +73,11 @@ func TestHostedAgentBuilder_Build(t *testing.T) {
 	store := NewInMemorySessionStore()
 
 	// Act
-	hosted := NewHostedAgentBuilder("my-hosted-agent").
+	hosted, err := NewHostedAgentBuilder("my-hosted-agent").
 		WithAgent(ag).
 		WithSessionStore(store).
 		Build()
+	require.NoError(t, err)
 
 	// Assert
 	assert.Equal(t, "my-hosted-agent", hosted.HostedAgentName())
@@ -90,9 +91,10 @@ func TestHostedAgentBuilder_Build_DefaultSessionStore(t *testing.T) {
 	ag := &builderMockAgent{id: "agent-1", name: "Test Agent"}
 
 	// Act
-	hosted := NewHostedAgentBuilder("my-agent").
+	hosted, err := NewHostedAgentBuilder("my-agent").
 		WithAgent(ag).
 		Build()
+	require.NoError(t, err)
 
 	// Assert
 	assert.NotNil(t, hosted.SessionStore())
@@ -100,14 +102,15 @@ func TestHostedAgentBuilder_Build_DefaultSessionStore(t *testing.T) {
 	assert.True(t, isInMemory)
 }
 
-func TestHostedAgentBuilder_Build_PanicsWithoutAgent(t *testing.T) {
+func TestHostedAgentBuilder_Build_ReturnsErrorWithoutAgent(t *testing.T) {
 	// Arrange
 	builder := NewHostedAgentBuilder("my-agent")
 
-	// Act & Assert
-	assert.Panics(t, func() {
-		builder.Build()
-	})
+	// Act
+	_, err := builder.Build()
+
+	// Assert
+	assert.Error(t, err)
 }
 
 func TestHostedAgentBuilder_WithMiddleware(t *testing.T) {
@@ -123,10 +126,11 @@ func TestHostedAgentBuilder_WithMiddleware(t *testing.T) {
 	}
 
 	// Act
-	hosted := NewHostedAgentBuilder("my-agent").
+	hosted, err := NewHostedAgentBuilder("my-agent").
 		WithAgent(ag).
 		WithMiddleware(middleware).
 		Build()
+	require.NoError(t, err)
 
 	// Create a test handler
 	innerHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -168,11 +172,12 @@ func TestHostedAgentBuilder_MiddlewareOrder(t *testing.T) {
 	}
 
 	// Act
-	hosted := NewHostedAgentBuilder("my-agent").
+	hosted, err := NewHostedAgentBuilder("my-agent").
 		WithAgent(ag).
 		WithMiddleware(middleware1).
 		WithMiddleware(middleware2).
 		Build()
+	require.NoError(t, err)
 
 	innerHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callOrder = append(callOrder, "handler")
@@ -194,10 +199,11 @@ func TestHostedAgent_GetOrCreateSession(t *testing.T) {
 	ag := &builderMockAgent{id: "agent-1", name: "Test Agent"}
 	store := NewInMemorySessionStore()
 
-	hosted := NewHostedAgentBuilder("my-agent").
+	hosted, err := NewHostedAgentBuilder("my-agent").
 		WithAgent(ag).
 		WithSessionStore(store).
 		Build()
+	require.NoError(t, err)
 
 	ctx := context.Background()
 
@@ -223,10 +229,11 @@ func TestHostedAgent_DeleteSession(t *testing.T) {
 	ag := &builderMockAgent{id: "agent-1", name: "Test Agent"}
 	store := NewInMemorySessionStore()
 
-	hosted := NewHostedAgentBuilder("my-agent").
+	hosted, err := NewHostedAgentBuilder("my-agent").
 		WithAgent(ag).
 		WithSessionStore(store).
 		Build()
+	require.NoError(t, err)
 
 	ctx := context.Background()
 
@@ -235,7 +242,7 @@ func TestHostedAgent_DeleteSession(t *testing.T) {
 	_ = hosted.SaveSession(ctx, "conv-1", session)
 
 	// Act
-	err := hosted.DeleteSession(ctx, "conv-1")
+	err = hosted.DeleteSession(ctx, "conv-1")
 	require.NoError(t, err)
 
 	// Assert - next get should create new session

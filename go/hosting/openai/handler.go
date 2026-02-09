@@ -14,12 +14,15 @@ import (
 // The handler implements http.Handler and routes requests to the appropriate
 // endpoint handlers based on the request path.
 type Handler struct {
-	agent            agent.Agent
-	sessionStore     hosting.SessionStore
-	modelName        string
-	streamingEnabled bool
-	basePath         string
-	mux              *http.ServeMux
+	agent             agent.Agent
+	sessionStore      hosting.SessionStore
+	modelName         string
+	streamingEnabled  bool
+	basePath          string
+	responsesService  ResponsesService
+	conversationStore ConversationStore
+	conversationIndex AgentConversationIndex
+	mux               *http.ServeMux
 }
 
 // NewHandler creates an HTTP handler for the given agent.
@@ -56,6 +59,13 @@ func NewHandler(a agent.Agent, opts ...Option) *Handler {
 		}
 	}
 
+	if h.conversationStore == nil {
+		h.conversationStore = NewInMemoryConversationStore()
+	}
+	if h.responsesService == nil {
+		h.responsesService = NewInMemoryResponsesService(a, h.conversationStore)
+	}
+
 	// Create router
 	h.mux = http.NewServeMux()
 	h.setupRoutes()
@@ -68,6 +78,20 @@ func (h *Handler) setupRoutes() {
 	h.mux.HandleFunc("POST "+h.basePath+"/chat/completions", h.handleChatCompletions)
 	h.mux.HandleFunc("GET "+h.basePath+"/models", h.handleListModels)
 	h.mux.HandleFunc("GET "+h.basePath+"/models/{model}", h.handleGetModel)
+	h.mux.HandleFunc("POST "+h.basePath+"/responses", h.handleResponsesCreate)
+	h.mux.HandleFunc("GET "+h.basePath+"/responses/{responseId}", h.handleResponsesGet)
+	h.mux.HandleFunc("POST "+h.basePath+"/responses/{responseId}/cancel", h.handleResponsesCancel)
+	h.mux.HandleFunc("DELETE "+h.basePath+"/responses/{responseId}", h.handleResponsesDelete)
+	h.mux.HandleFunc("GET "+h.basePath+"/responses/{responseId}/input_items", h.handleResponsesListInputItems)
+	h.mux.HandleFunc("GET "+h.basePath+"/conversations", h.handleConversationsList)
+	h.mux.HandleFunc("POST "+h.basePath+"/conversations", h.handleConversationsCreate)
+	h.mux.HandleFunc("GET "+h.basePath+"/conversations/{conversationId}", h.handleConversationsGet)
+	h.mux.HandleFunc("POST "+h.basePath+"/conversations/{conversationId}", h.handleConversationsUpdate)
+	h.mux.HandleFunc("DELETE "+h.basePath+"/conversations/{conversationId}", h.handleConversationsDelete)
+	h.mux.HandleFunc("POST "+h.basePath+"/conversations/{conversationId}/items", h.handleConversationsCreateItems)
+	h.mux.HandleFunc("GET "+h.basePath+"/conversations/{conversationId}/items", h.handleConversationsListItems)
+	h.mux.HandleFunc("GET "+h.basePath+"/conversations/{conversationId}/items/{itemId}", h.handleConversationsGetItem)
+	h.mux.HandleFunc("DELETE "+h.basePath+"/conversations/{conversationId}/items/{itemId}", h.handleConversationsDeleteItem)
 }
 
 // ServeHTTP implements http.Handler.

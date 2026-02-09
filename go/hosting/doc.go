@@ -25,11 +25,14 @@
 // The builder pattern simplifies creating hosted agents with session
 // management and HTTP middleware:
 //
-//	hosted := hosting.NewHostedAgentBuilder("my-agent").
+//	hosted, err := hosting.NewHostedAgentBuilder("my-agent").
 //	    WithAgent(myAgent).
 //	    WithSessionStore(store).
 //	    WithMiddleware(loggingMiddleware).
 //	    Build()
+//	if err != nil {
+//	    // handle error
+//	}
 //
 // See the hosting/openai subpackage for OpenAI-compatible HTTP endpoints.
 package hosting

@@ -4,6 +4,7 @@ package hosting
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/microsoft/agent-framework-go/agent"
@@ -13,11 +14,14 @@ import (
 //
 // Example:
 //
-//	hosted := hosting.NewHostedAgentBuilder("my-agent").
+//	hosted, err := hosting.NewHostedAgentBuilder("my-agent").
 //	    WithAgent(myAgent).
 //	    WithSessionStore(hosting.NewInMemorySessionStore()).
 //	    WithMiddleware(loggingMiddleware).
 //	    Build()
+//	if err != nil {
+//	    // handle error
+//	}
 type HostedAgentBuilder struct {
 	name         string
 	agent        agent.Agent
@@ -53,10 +57,10 @@ func (b *HostedAgentBuilder) WithMiddleware(m func(http.Handler) http.Handler) *
 }
 
 // Build creates the hosted agent.
-// Panics if no agent has been set.
-func (b *HostedAgentBuilder) Build() *HostedAgent {
+// Returns an error if no agent has been set.
+func (b *HostedAgentBuilder) Build() (*HostedAgent, error) {
 	if b.agent == nil {
-		panic("hosted agent requires an agent to be set via WithAgent")
+		return nil, fmt.Errorf("hosted agent requires an agent to be set via WithAgent")
 	}
 
 	// Default to in-memory session store if not specified
@@ -70,7 +74,7 @@ func (b *HostedAgentBuilder) Build() *HostedAgent {
 		name:         b.name,
 		sessionStore: sessionStore,
 		middleware:   b.middleware,
-	}
+	}, nil
 }
 
 // HostedAgent wraps an agent with session management and hosting capabilities.

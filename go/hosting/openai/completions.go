@@ -32,17 +32,20 @@ func (h *Handler) handleChatCompletions(w http.ResponseWriter, r *http.Request) 
 	messages := ToAgentMessages(req.Messages)
 
 	// Get or create session
-	session, err := h.getOrCreateSession(r.Context(), r)
+	session, conversationID, err := h.getOrCreateSession(r.Context(), r)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "server_error", "Failed to get session: "+err.Error())
 		return
 	}
+	if conversationID != "" {
+		w.Header().Set("X-Conversation-ID", conversationID)
+	}
 
 	// Route to streaming or non-streaming
 	if req.Stream && h.streamingEnabled {
-		h.streamCompletions(w, r.Context(), session, messages, req)
+		h.streamCompletions(w, r.Context(), conversationID, session, messages, req)
 	} else {
-		h.completeSync(w, r.Context(), session, messages, req)
+		h.completeSync(w, r.Context(), conversationID, session, messages, req)
 	}
 }
 
@@ -50,6 +53,7 @@ func (h *Handler) handleChatCompletions(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) completeSync(
 	w http.ResponseWriter,
 	ctx context.Context,
+	conversationID string,
 	session agent.Session,
 	messages []chat.Message,
 	req ChatCompletionRequest,
@@ -65,7 +69,7 @@ func (h *Handler) completeSync(
 	}
 
 	// Save session if store is configured
-	if err := h.saveSession(ctx, session); err != nil {
+	if err := h.saveSession(ctx, conversationID, session); err != nil {
 		writeError(w, http.StatusInternalServerError, "server_error", "Failed to save session: "+err.Error())
 		return
 	}
@@ -76,25 +80,31 @@ func (h *Handler) completeSync(
 }
 
 // getOrCreateSession retrieves an existing session or creates a new one.
-func (h *Handler) getOrCreateSession(ctx context.Context, r *http.Request) (agent.Session, error) {
+func (h *Handler) getOrCreateSession(ctx context.Context, r *http.Request) (agent.Session, string, error) {
 	convID := r.Header.Get("X-Conversation-ID")
 
 	if h.sessionStore != nil && convID != "" {
-		return h.sessionStore.GetSession(ctx, h.agent, convID)
+		session, err := h.sessionStore.GetSession(ctx, h.agent, convID)
+		return session, convID, err
 	}
 
 	// Create a new in-memory session
-	return h.agent.NewSession(ctx)
+	session, err := h.agent.NewSession(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	if h.sessionStore != nil && convID == "" && session != nil {
+		convID = session.ID()
+	}
+	return session, convID, nil
 }
 
 // saveSession persists the session if a store is configured.
-func (h *Handler) saveSession(ctx context.Context, session agent.Session) error {
-	if h.sessionStore == nil {
+func (h *Handler) saveSession(ctx context.Context, conversationID string, session agent.Session) error {
+	if h.sessionStore == nil || conversationID == "" {
 		return nil
 	}
-	// We need to get the conversation ID from the request context
-	// For now, we'll use the session ID as the conversation ID
-	return h.sessionStore.SaveSession(ctx, h.agent, session.ID(), session)
+	return h.sessionStore.SaveSession(ctx, h.agent, conversationID, session)
 }
 
 // buildRunOptions creates agent run options.

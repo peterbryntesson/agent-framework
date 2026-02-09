@@ -16,6 +16,7 @@ type Client struct {
 	serverInfo  *Implementation
 	serverCaps  *ServerCapabilities
 	clientInfo  Implementation
+	clientCaps  ClientCapabilities
 	mu          sync.RWMutex
 	initialized bool
 	closed      bool
@@ -70,6 +71,7 @@ func NewClient(ctx context.Context, transport Transport, opts ...ClientOption) (
 	client := &Client{
 		transport:  transport,
 		clientInfo: cfg.clientInfo,
+		clientCaps: cfg.capabilities,
 	}
 
 	// Start the transport
@@ -91,7 +93,7 @@ func NewClient(ctx context.Context, transport Transport, opts ...ClientOption) (
 func (c *Client) initialize(ctx context.Context) error {
 	params := InitializeParams{
 		ProtocolVersion: ProtocolVersion,
-		Capabilities:    cfg.capabilities,
+		Capabilities:    c.clientCaps,
 		ClientInfo:      c.clientInfo,
 	}
 
