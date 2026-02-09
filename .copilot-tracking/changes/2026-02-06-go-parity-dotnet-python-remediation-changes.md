@@ -1,12 +1,25 @@
+---
+title: Go Parity Remediation Release Changes
+description: Change log for Go parity remediation validation and parity updates.
+author: GitHub Copilot
+ms.date: 2026-02-09
+ms.topic: reference
+keywords:
+	- go
+	- parity
+	- remediation
+estimated_reading_time: 2
+---
+
 <!-- markdownlint-disable-file -->
-# Release Changes: Go Parity Remediation
+## Release Changes: Go Parity Remediation
 
 **Related Plan**: 2026-02-06-go-parity-dotnet-python-remediation-plan.instructions.md
-**Implementation Date**: 2026-02-06
+**Implementation Date**: 2026-02-09
 
 ## Summary
 
-Added MCP WebSocket transport, prompt/logging/sampling handlers, declarative parity updates, AG-UI run metadata handling, and OpenAI responses/conversations hosting endpoints with session persistence alignment.
+Added MCP WebSocket transport, prompt/logging/sampling handlers, declarative parity updates, AG-UI run metadata handling, and OpenAI responses/conversations hosting endpoints with session persistence alignment. Validated Go formatting and vet checks for updated modules.
 
 ## Changes
 
@@ -59,6 +72,8 @@ Added MCP WebSocket transport, prompt/logging/sampling handlers, declarative par
 * go/purview/doc.go - Note Azure SDK TokenCredential alignment in Purview usage docs.
 * go/go.mod - Add Azure SDK azcore dependency for Purview credential alignment.
 * go/go.sum - Track Azure SDK azcore checksums.
+* go/tool/hosted.go - Format hosted tool implementation for Go style consistency.
+* go/tool/hosted_test.go - Format hosted tool tests for Go style consistency.
 
 ### Removed
 
@@ -67,8 +82,10 @@ Added MCP WebSocket transport, prompt/logging/sampling handlers, declarative par
 ## Additional or Deviating Changes
 
 * Added minimal Responses/Conversations handler tests outside explicit plan scope
-	* Ensures new endpoints have baseline coverage and reduces regression risk
+  * Ensures new endpoints have baseline coverage and reduces regression risk
 
 ## Release Summary
 
-Pending remaining phases completion.
+Total files affected: 44 (13 added, 31 modified, 0 removed).
+Dependencies: Added `github.com/gorilla/websocket` and `github.com/Azure/azure-sdk-for-go/sdk/azcore`.
+Deployment notes: None.

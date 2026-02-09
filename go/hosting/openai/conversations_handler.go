@@ -127,7 +127,7 @@ func (h *Handler) handleConversationsUpdate(w http.ResponseWriter, r *http.Reque
 // handleConversationsDelete handles DELETE /v1/conversations/{conversationId}.
 func (h *Handler) handleConversationsDelete(w http.ResponseWriter, r *http.Request) {
 	conversationID := r.PathValue("conversationId")
-	conversation, ok, err := h.conversationStore.GetConversation(r.Context(), conversationID)
+	conversation, _, err := h.conversationStore.GetConversation(r.Context(), conversationID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "server_error", "Failed to get conversation: "+err.Error())
 		return

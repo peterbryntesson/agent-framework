@@ -74,9 +74,9 @@ Use this plan to address parity gaps identified in the review for Go Epic 5 pari
 
 ### Phase 6: Validation and documentation
 
-* [ ] Run Go lint and format checks relevant to modified packages
-* [ ] Update or add docs for any behavior changes and parity decisions
-* [ ] Capture a changes log for the remediation work
+* [x] Run Go lint and format checks relevant to modified packages
+* [x] Update or add docs for any behavior changes and parity decisions
+* [x] Capture a changes log for the remediation work
 
 ## Validation Plan
 
