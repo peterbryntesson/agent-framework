@@ -42,7 +42,8 @@ To add Purview content policy evaluation to an agent:
 
 # Settings
 
-The Settings struct configures Purview integration:
+The Settings struct configures Purview integration. Credentials use the Azure
+SDK TokenCredential interface, so azidentity credentials work without adapters:
 
 	settings := purview.Settings{
 	    TenantID:       "your-tenant-id",       // Required: Azure AD tenant

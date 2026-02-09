@@ -62,9 +62,12 @@ DevUI integrates with OpenTelemetry to collect and display traces:
 
 Traces are stored in memory and can be queried via the API or viewed in the UI.
 
-# Frontend Customization
+# Frontend Assets
 
-The default frontend can be replaced with custom assets:
+The Go DevUI server does not embed frontend assets. Provide your own frontend
+bundle or file system and inject it with WithFrontendFS. This keeps the Go
+package lightweight while allowing parity with the richer DevUI experiences in
+.NET and Python when the same frontend assets are supplied.
 
 	server := devui.NewServer(
 	    devui.WithFrontendFS(customFS),

@@ -3,28 +3,21 @@
 package purview
 
 import (
-	"context"
 	"net/http"
 	"time"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 )
 
-// TokenCredential abstracts Azure Identity credential for authentication.
-// This interface is compatible with azcore.TokenCredential from the Azure SDK.
-type TokenCredential interface {
-	// GetToken retrieves an access token for the specified scopes.
-	GetToken(ctx context.Context, options TokenRequestOptions) (AccessToken, error)
-}
+// TokenCredential is the Azure SDK credential interface used for authentication.
+type TokenCredential = azcore.TokenCredential
 
 // TokenRequestOptions contains options for token requests.
-type TokenRequestOptions struct {
-	Scopes []string
-}
+type TokenRequestOptions = policy.TokenRequestOptions
 
 // AccessToken represents an Azure access token.
-type AccessToken struct {
-	Token     string
-	ExpiresOn time.Time
-}
+type AccessToken = azcore.AccessToken
 
 // Option configures a Middleware.
 type Option func(*Middleware)

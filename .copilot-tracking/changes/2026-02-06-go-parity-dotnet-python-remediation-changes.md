@@ -54,6 +54,11 @@ Added MCP WebSocket transport, prompt/logging/sampling handlers, declarative par
 * go/hosting/openai/streaming.go - Persist sessions by conversation ID after streaming.
 * go/hosting/openai/options.go - Add responses/conversations service options.
 * go/hosting/openai/doc.go - Document responses and conversations endpoints.
+* go/devui/doc.go - Document frontend asset injection requirements and parity rationale.
+* go/purview/options.go - Align TokenCredential types with Azure SDK azcore/policy interfaces.
+* go/purview/doc.go - Note Azure SDK TokenCredential alignment in Purview usage docs.
+* go/go.mod - Add Azure SDK azcore dependency for Purview credential alignment.
+* go/go.sum - Track Azure SDK azcore checksums.
 
 ### Removed
 

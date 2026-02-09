@@ -69,8 +69,8 @@ Use this plan to address parity gaps identified in the review for Go Epic 5 pari
 
 ### Phase 5: DevUI and Purview parity
 
-* [ ] Add embedded DevUI frontend assets or document injection requirements with a parity rationale
-* [ ] Decide on TokenCredential interface alignment with Azure SDK patterns
+* [x] Add embedded DevUI frontend assets or document injection requirements with a parity rationale
+* [x] Decide on TokenCredential interface alignment with Azure SDK patterns
 
 ### Phase 6: Validation and documentation
 
